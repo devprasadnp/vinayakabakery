@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/panel :: head(${coupon == null} ? 'New coupon' : 'Edit coupon')}"></head>
+<body>
+<div class="shell">
+    <aside th:replace="~{fragments/panel :: sidebar('coupons')}"></aside>
+
+    <main class="work">
+        <div class="topbar">
+            <div>
+                <h1 th:text="${coupon == null} ? 'New coupon' : ${coupon.code}">New coupon</h1>
+                <div class="crumb" th:text="${coupon == null}
+                     ? 'Set it up, then share the code with customers'
+                     : 'Edit the terms, or pause it without deleting it'">Details</div>
+            </div>
+            <a class="btn ghost" th:href="@{/admin/coupons}">← All coupons</a>
+        </div>
+
+        <div class="work-body">
+            <div th:replace="~{fragments/panel :: flash}"></div>
+
+            <div class="split">
+                <form class="panel" th:action="@{/admin/coupons}" method="post">
+                    <input type="hidden" name="id" th:if="${coupon != null}" th:value="${coupon.id}">
+
+                    <div class="panel-head"><h3>Details</h3></div>
+
+                    <div class="row-2">
+                        <div class="field">
+                            <label for="code">Coupon code</label>
+                            <input id="code" name="code" required maxlength="32" style="text-transform:uppercase"
+                                   placeholder="SAVE10" th:value="${coupon != null} ? ${coupon.code} : ''">
+                            <div class="hint">What the customer types in. Saved in capitals.</div>
+                        </div>
+                        <div class="field">
+                            <label for="description">Description <span class="muted">(optional, admin-only)</span></label>
+                            <input id="description" name="description" maxlength="255"
+                                   placeholder="Festival launch offer"
+                                   th:value="${coupon != null} ? ${coupon.description} : ''">
+                        </div>
+                    </div>
+
+                    <div class="row-2">
+                        <div class="field">
+                            <label for="discountType">Discount type</label>
+                            <select id="discountType" name="discountType" onchange="toggleDiscountFields()">
+                                <option th:each="t : ${discountTypes}" th:value="${t.name()}" th:text="${t.label}"
+                                        th:selected="${coupon != null and coupon.discountType == t}"></option>
+                            </select>
+                        </div>
+                        <div class="field" id="percentField">
+                            <label for="percentOff">Percentage off</label>
+                            <input id="percentOff" name="percentOff" type="number" min="1" max="100"
+                                   th:value="${coupon != null} ? ${coupon.percentOff} : ''">
+                        </div>
+                        <div class="field" id="flatField" style="display:none">
+                            <label for="flatOffRupees">Flat amount off (₹)</label>
+                            <input id="flatOffRupees" name="flatOffRupees" type="number" step="0.01" min="1"
+                                   th:value="${coupon != null and coupon.flatOffPaise != null}
+                                     ? ${T(com.harish.pickles.dto.Money).toRupees(coupon.flatOffPaise)} : ''">
+                        </div>
+                    </div>
+
+                    <div class="row-2">
+                        <div class="field">
+                            <label for="maxDiscountRupees">Max discount cap (₹) <span class="muted">(optional)</span></label>
+                            <input id="maxDiscountRupees" name="maxDiscountRupees" type="number" step="0.01" min="0"
+                                   th:value="${coupon != null and coupon.maxDiscountPaise != null}
+                                     ? ${T(com.harish.pickles.dto.Money).toRupees(coupon.maxDiscountPaise)} : ''">
+                            <div class="hint">Mostly useful with a percentage coupon, so a big cart doesn't
+                                discount too much.</div>
+                        </div>
+                        <div class="field">
+                            <label for="minOrderRupees">Minimum order value (₹) <span class="muted">(optional)</span></label>
+                            <input id="minOrderRupees" name="minOrderRupees" type="number" step="0.01" min="0"
+                                   th:value="${coupon != null and coupon.minOrderPaise > 0}
+                                     ? ${T(com.harish.pickles.dto.Money).toRupees(coupon.minOrderPaise)} : ''">
+                        </div>
+                    </div>
+
+                    <div class="row-2">
+                        <div class="field">
+                            <label for="totalUsageLimit">Total uses allowed <span class="muted">(optional)</span></label>
+                            <input id="totalUsageLimit" name="totalUsageLimit" type="number" min="1"
+                                   placeholder="Unlimited"
+                                   th:value="${coupon != null} ? ${coupon.totalUsageLimit} : ''">
+                            <div class="hint" th:if="${coupon != null}"
+                                 th:text="|Used ${coupon.usedCount} time(s) so far|"></div>
+                        </div>
+                        <div class="field">
+                            <label for="perCustomerLimit">Uses per customer <span class="muted">(optional)</span></label>
+                            <input id="perCustomerLimit" name="perCustomerLimit" type="number" min="1"
+                                   placeholder="Unlimited"
+                                   th:value="${coupon != null} ? ${coupon.perCustomerLimit} : ''">
+                        </div>
+                    </div>
+
+                    <div class="row-2">
+                        <div class="field">
+                            <label for="startAt">Starts <span class="muted">(optional)</span></label>
+                            <input id="startAt" name="startAt" type="datetime-local"
+                                   th:value="${coupon != null and coupon.startAt != null}
+                                     ? ${#temporals.format(coupon.startAt, 'yyyy-MM-dd''T''HH:mm')} : ''">
+                        </div>
+                        <div class="field">
+                            <label for="endAt">Ends <span class="muted">(optional)</span></label>
+                            <input id="endAt" name="endAt" type="datetime-local"
+                                   th:value="${coupon != null and coupon.endAt != null}
+                                     ? ${#temporals.format(coupon.endAt, 'yyyy-MM-dd''T''HH:mm')} : ''">
+                        </div>
+                    </div>
+
+                    <div class="field inline-check">
+                        <label>
+                            <input type="checkbox" name="active" value="true"
+                                   th:checked="${coupon == null or coupon.active}">
+                            Active (customers can apply this code)
+                        </label>
+                    </div>
+
+                    <div class="form-actions">
+                        <button class="btn lg" type="submit">Save coupon</button>
+                        <a class="btn ghost" th:href="@{/admin/coupons}">Cancel</a>
+                    </div>
+                </form>
+
+                <div class="sticky-side">
+                    <div class="panel">
+                        <h3 class="mt-0">How it applies</h3>
+                        <p class="small muted">A customer enters the code on the cart or checkout page. The
+                            discount is checked again when the order is placed, so it always matches what is
+                            configured here at that moment.</p>
+                        <p class="small muted mb-0">Leaving a limit blank means unlimited. The minimum order
+                            value and the max discount cap both compare against the cart subtotal, before
+                            shipping.</p>
+                    </div>
+
+                    <div class="panel danger-box" sec:authorize="hasRole('SUPER_ADMIN')" th:if="${coupon != null}">
+                        <h3>Danger zone</h3>
+                        <p class="small">Archiving hides this coupon everywhere. You can restore it, or delete
+                            it for good from the archive — only while it has never been used.</p>
+                        <form th:action="@{'/superadmin/coupons/' + ${coupon.id} + '/archive'}" method="post"
+                              onsubmit="return confirm('Archive this coupon? Customers will no longer be able to apply it.');">
+                            <button class="btn danger block" type="submit">Archive this coupon</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script th:inline="javascript">
+    function toggleDiscountFields() {
+        var type = document.getElementById('discountType').value;
+        document.getElementById('percentField').style.display = type === 'PERCENT' ? '' : 'none';
+        document.getElementById('flatField').style.display = type === 'FLAT' ? '' : 'none';
+    }
+    toggleDiscountFields();
+</script>
+</body>
+</html>

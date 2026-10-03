@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/panel :: head('Orders')}"></head>
+<body>
+<div class="shell">
+    <aside th:replace="~{fragments/panel :: sidebar('orders')}"></aside>
+
+    <main class="work">
+        <div class="topbar">
+            <div>
+                <h1>Orders</h1>
+                <div class="crumb" th:text="|${orders.totalElements} order(s)|">0</div>
+            </div>
+            <a class="btn ghost" th:href="@{/admin}">← Dashboard</a>
+        </div>
+
+        <div class="work-body">
+            <div th:replace="~{fragments/panel :: flash}"></div>
+
+            <form class="filters" th:action="@{/admin/orders}" method="get">
+                <label class="muted small" for="statusFilter">Filter by status</label>
+                <select id="statusFilter" name="status" onchange="this.form.submit()">
+                    <option value="">All statuses</option>
+                    <option th:each="s : ${statuses}" th:value="${s.name()}" th:text="${s}"
+                            th:selected="${status != null and status == s}"></option>
+                </select>
+                <a class="btn ghost" th:href="@{/admin/orders}" th:if="${status != null}">Clear</a>
+            </form>
+
+            <div class="empty" th:if="${orders.isEmpty()}">
+                <div class="ico">📦</div>
+                <h3>No orders to show</h3>
+                <p>Nothing matches this filter yet.</p>
+            </div>
+
+            <div class="table-wrap" th:unless="${orders.isEmpty()}">
+                <div class="table-scroll">
+                    <table class="data">
+                        <thead>
+                        <tr><th>Order</th><th>Customer</th><th>Ship to</th><th class="num">Jars</th>
+                            <th class="num">Total</th><th>Status</th><th>Confirm UPI payment</th><th>Delivery partner</th><th>Move to</th>
+                            <th sec:authorize="hasRole('SUPER_ADMIN')"></th></tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="o : ${orders.content}">
+                            <td>
+                                <strong th:text="${o.orderNumber}">HP-…</strong>
+                                <div class="sub" th:text="${#temporals.format(o.placedAt, 'dd MMM yyyy, HH:mm')}"></div>
+                            </td>
+                            <td>
+                                <span th:text="${o.customerName}">Name</span>
+                                <div class="sub" th:if="${o.shippingAddress != null}"
+                                     th:text="${o.shippingAddress.contactPhone}"></div>
+                            </td>
+                            <td class="sub" style="max-width:240px"
+                                th:text="${o.shippingAddress != null} ? ${o.shippingAddress.singleLine} : '—'"></td>
+                            <td class="num" th:text="${o.totalQuantity}">0</td>
+                            <td class="num nowrap"
+                                th:text="${T(com.harish.pickles.dto.Money).format(o.totalPaise)}">₹0</td>
+                            <td><span class="status" th:classappend="${o.status.name()}"
+                                      th:text="${o.status}">PAID</span></td>
+                            <td>
+                                <div th:with="pmt=${payments.get(o.orderNumber)},
+                                              editable=${o.status.name() == 'PENDING_PAYMENT' or o.status.name() == 'PAYMENT_FAILED' or o.status.name() == 'PAID'}">
+                                    <p class="muted small mb-0" th:if="${pmt != null}">
+                                        Ref: <strong th:text="${pmt.transactionId}">UTR</strong> ·
+                                        <span th:text="${T(com.harish.pickles.dto.Money).format(pmt.amountPaise)}">₹0</span> ·
+                                        <span th:text="${pmt.status}">COMPLETED</span>
+                                    </p>
+                                    <form th:if="${editable}"
+                                          th:action="@{'/admin/orders/' + ${o.orderNumber} + '/confirm-payment'}" method="post"
+                                          class="stack tight"
+                                          onsubmit="return confirm('Save this UPI payment reference and amount?');">
+                                        <input type="text" name="transactionId" placeholder="UPI ref / UTR" required maxlength="120"
+                                               th:value="${pmt != null} ? ${pmt.transactionId} : null">
+                                        <input type="number" name="amount" step="0.01" min="0"
+                                               th:value="${pmt != null} ? ${T(com.harish.pickles.dto.Money).toRupees(pmt.amountPaise)} : ${T(com.harish.pickles.dto.Money).toRupees(o.totalPaise)}"
+                                               required>
+                                        <button class="btn sm" type="submit" th:text="${pmt != null} ? 'Update' : 'Confirm paid'">Confirm paid</button>
+                                    </form>
+                                    <span class="muted small" th:if="${pmt == null and !editable}">—</span>
+                                </div>
+                            </td>
+                            <td>
+                                <div th:with="assignable=${o.status.name() == 'PAID' or o.status.name() == 'PACKED' or o.status.name() == 'SHIPPED'}">
+                                    <div class="sub" th:if="${o.deliveryPartner != null}"
+                                         th:text="|With ${o.deliveryPartner.fullName}|">With …</div>
+                                    <form th:if="${assignable}"
+                                          th:action="@{'/admin/orders/' + ${o.orderNumber} + '/assign'}" method="post"
+                                          class="stack tight">
+                                        <select name="partnerId">
+                                            <option value="">— Unassigned —</option>
+                                            <option th:each="dp : ${partners}" th:value="${dp.id}" th:text="${dp.fullName}"
+                                                    th:selected="${o.deliveryPartner != null and o.deliveryPartner.id == dp.id}"></option>
+                                        </select>
+                                        <button class="btn ghost sm" type="submit">Assign</button>
+                                    </form>
+                                    <span class="muted small" th:if="${!assignable and o.deliveryPartner == null}">—</span>
+                                </div>
+                            </td>
+                            <td>
+                                <form th:action="@{'/admin/orders/' + ${o.orderNumber} + '/status'}" method="post"
+                                      class="stack tight">
+                                    <select name="status">
+                                        <option th:each="s : ${statuses}" th:value="${s.name()}" th:text="${s}"
+                                                th:selected="${o.status == s}"></option>
+                                    </select>
+                                    <button class="btn ghost sm" type="submit">Update</button>
+                                </form>
+                            </td>
+                            <td sec:authorize="hasRole('SUPER_ADMIN')">
+                                <form th:action="@{'/superadmin/orders/' + ${o.orderNumber} + '/archive'}" method="post"
+                                      onsubmit="return confirm('Archive this order? Unpaid orders are cancelled and their stock returned.');">
+                                    <button class="btn danger-ghost sm" type="submit">Archive</button>
+                                </form>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="stack mt-4" th:if="${orders.totalPages > 1}">
+                <a class="btn ghost sm" th:if="${!orders.first}"
+                   th:href="@{/admin/orders(status=${status != null ? status.name() : null}, page=${orders.number - 1})}">← Previous</a>
+                <span class="muted small" th:text="|Page ${orders.number + 1} of ${orders.totalPages}|"></span>
+                <a class="btn ghost sm" th:if="${!orders.last}"
+                   th:href="@{/admin/orders(status=${status != null ? status.name() : null}, page=${orders.number + 1})}">Next →</a>
+            </div>
+        </div>
+    </main>
+</div>
+</body>
+</html>

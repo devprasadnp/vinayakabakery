@@ -1,0 +1,28 @@
+# In-memory database so the test suite needs no PostgreSQL.
+spring:
+  datasource:
+    url: jdbc:h2:mem:pickles;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    # Run src/test/resources/data.sql only after Hibernate has created the tables.
+    defer-datasource-initialization: true
+  flyway:
+    enabled: false
+  thymeleaf:
+    cache: false
+
+app:
+  security:
+    jwt:
+      secret: test-only-secret-value-that-is-long-enough-32
+
+payments:
+  phonepe:
+    mock: true
+    webhook:
+      username: testuser
+      password: testpass

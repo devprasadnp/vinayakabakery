@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/panel :: head('Foods')}"></head>
+<body>
+<div class="shell">
+    <aside th:replace="~{fragments/panel :: sidebar('products')}"></aside>
+
+    <main class="work">
+        <div class="topbar">
+            <div>
+                <h1>Foods</h1>
+                <div class="crumb" th:text="|${products.totalElements} in the catalogue|">0</div>
+            </div>
+            <a class="btn" th:href="@{/admin/products/new}">+ Add a food</a>
+        </div>
+
+        <div class="work-body">
+            <div th:replace="~{fragments/panel :: flash}"></div>
+
+            <form class="filters" th:action="@{/admin/products}" method="get">
+                <a class="tab" th:classappend="${type == null} ? 'active' : ''"
+                   th:href="@{/admin/products(categoryId=${categoryId}, sort=${sort})}">All</a>
+                <a class="tab" th:classappend="${type != null and type.name() == 'VEG'} ? 'active' : ''"
+                   th:href="@{/admin/products(type='VEG', categoryId=${categoryId}, sort=${sort})}">Veg</a>
+                <a class="tab nonveg" th:classappend="${type != null and type.name() == 'NON_VEG'} ? 'active' : ''"
+                   th:href="@{/admin/products(type='NON_VEG', categoryId=${categoryId}, sort=${sort})}">Non-Veg</a>
+                <input type="hidden" name="type" th:value="${type != null} ? ${type.name()} : ''">
+
+                <select name="categoryId" onchange="this.form.submit()">
+                    <option value="" th:selected="${categoryId == null}">All categories</option>
+                    <option th:each="c : ${categories}" th:value="${c.id}" th:selected="${categoryId != null and categoryId == c.id}"
+                            th:text="|${c.badge} ${c.name}|"></option>
+                </select>
+
+                <input type="search" name="q" placeholder="Search by name, category or SKU" th:value="${q}">
+
+                <select name="sort" onchange="this.form.submit()">
+                    <option value="name" th:selected="${sort == null or sort == 'name'}">Name A-Z</option>
+                    <option value="name_desc" th:selected="${sort == 'name_desc'}">Name Z-A</option>
+                    <option value="newest" th:selected="${sort == 'newest'}">Newest first</option>
+                    <option value="price_asc" th:selected="${sort == 'price_asc'}">Price: Low to High</option>
+                    <option value="price_desc" th:selected="${sort == 'price_desc'}">Price: High to Low</option>
+                    <option value="stock_asc" th:selected="${sort == 'stock_asc'}">Stock: Low to High</option>
+                    <option value="stock_desc" th:selected="${sort == 'stock_desc'}">Stock: High to Low</option>
+                </select>
+
+                <button class="btn ghost" type="submit">Search</button>
+                <a class="btn ghost" th:href="@{/admin/products}"
+                   th:if="${q != null and !q.isEmpty() or categoryId != null or (sort != null and sort != 'name')}">Clear</a>
+            </form>
+
+            <div class="empty" th:if="${products.isEmpty()}">
+                <div class="ico">🫙</div>
+                <h3>Nothing here</h3>
+                <p>Either the catalogue is empty or nothing matched that search.</p>
+                <a class="btn" th:href="@{/admin/products/new}">Add the first food</a>
+            </div>
+
+            <div class="table-wrap" th:unless="${products.isEmpty()}">
+                <div class="table-scroll">
+                    <table class="data">
+                        <thead>
+                        <tr><th>Food</th><th>Category</th><th>Type</th><th class="num">Price</th><th class="num">Stock</th>
+                            <th>Photos</th><th>Listed</th><th></th></tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="p : ${products.content}">
+                            <td>
+                                <div class="cell-title">
+                                    <img class="cell-thumb" th:if="${p.hasPhoto}"
+                                         th:src="${p.displayImageUrl}" th:alt="${p.name}">
+                                    <span class="cell-thumb" th:unless="${p.hasPhoto}"
+                                          th:classappend="${p.veg} ? '' : 'nonveg'"
+                                          th:text="${p.veg} ? '🥭' : '🍗'">🥭</span>
+                                    <span>
+                                        <strong th:text="${p.name}">Food</strong>
+                                        <div class="sub" th:text="|${p.sku} · ${p.category} · ${p.weightGrams} g|"></div>
+                                    </span>
+                                </div>
+                            </td>
+                            <td class="muted small" th:text="|${p.inventoryCategory.badge} ${p.inventoryCategory.name}|">Category</td>
+                            <td>
+                                <span class="chip" th:classappend="${p.veg} ? 'veg' : 'nonveg'">
+                                    <span class="mark" th:classappend="${p.veg} ? '' : 'nonveg'"></span>
+                                    <span th:text="${p.pickleType.label}">Veg</span>
+                                </span>
+                            </td>
+                            <td class="num nowrap"
+                                th:text="${T(com.harish.pickles.dto.Money).format(p.pricePaise)}">₹0</td>
+                            <td class="num"
+                                th:style="${p.stockQty < 5} ? 'color:var(--red-700);font-weight:700' : ''"
+                                th:text="${p.stockQty}">0</td>
+                            <td class="muted small" th:text="${p.images.size()}">0</td>
+                            <td>
+                                <form th:action="@{'/admin/products/' + ${p.id} + '/toggle'}" method="post">
+                                    <input type="hidden" name="active" th:value="${!p.active}">
+                                    <button type="submit" class="btn sm"
+                                            th:classappend="${p.active} ? 'subtle' : 'ghost'"
+                                            th:text="${p.active} ? 'Live' : 'Hidden'">Live</button>
+                                </form>
+                            </td>
+                            <td>
+                                <div class="btn-row">
+                                    <a class="btn ghost sm" th:href="@{'/admin/products/' + ${p.id} + '/edit'}">Edit</a>
+                                    <form sec:authorize="hasRole('SUPER_ADMIN')"
+                                          th:action="@{'/superadmin/products/' + ${p.id} + '/archive'}" method="post"
+                                          onsubmit="return confirm('Archive this food? It disappears from the shop but nothing is deleted yet.');">
+                                        <button class="btn danger-ghost sm" type="submit">Archive</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="stack mt-4" th:if="${products.totalPages > 1}">
+                <a class="btn ghost sm" th:if="${!products.first}"
+                   th:href="@{/admin/products(type=${type != null ? type.name() : null}, categoryId=${categoryId}, q=${q}, sort=${sort}, page=${products.number - 1})}">← Previous</a>
+                <span class="muted small" th:text="|Page ${products.number + 1} of ${products.totalPages}|"></span>
+                <a class="btn ghost sm" th:if="${!products.last}"
+                   th:href="@{/admin/products(type=${type != null ? type.name() : null}, categoryId=${categoryId}, q=${q}, sort=${sort}, page=${products.number + 1})}">Next →</a>
+            </div>
+        </div>
+    </main>
+</div>
+</body>
+</html>

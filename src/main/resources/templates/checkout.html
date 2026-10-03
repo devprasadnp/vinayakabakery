@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Checkout')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: header('cart')}"></header>
+<div th:replace="~{fragments/layout :: flash}"></div>
+
+<div class="wrap section">
+    <div class="section-head">
+        <div>
+            <h2>Delivery details</h2>
+            <p>We ship across India. Egg bakes travel in insulated packaging.</p>
+        </div>
+        <a class="btn ghost" th:href="@{/cart}">← Back to cart</a>
+    </div>
+
+    <div class="split">
+        <form class="panel" id="checkoutForm" th:action="@{/checkout}" method="post">
+            <div class="row-2">
+                <div class="field">
+                    <label for="contactName">Full name</label>
+                    <input id="contactName" name="contactName" required maxlength="120" autocomplete="name"
+                           th:value="${currentUser != null} ? ${currentUser.fullName} : ''">
+                </div>
+                <div class="field">
+                    <label for="contactPhone">Mobile number</label>
+                    <input id="contactPhone" name="contactPhone" required pattern="[6-9][0-9]{9}"
+                           inputmode="numeric" autocomplete="tel" placeholder="10 digits"
+                           th:value="${currentUser != null} ? ${currentUser.phone} : ''">
+                    <div class="hint">We send delivery updates here.</div>
+                </div>
+            </div>
+
+            <div class="field">
+                <label for="contactEmail">Email</label>
+                <input id="contactEmail" name="contactEmail" type="email" required autocomplete="email"
+                       th:value="${currentUser != null} ? ${currentUser.email} : ''">
+            </div>
+
+            <div class="field">
+                <label for="addressLine1">Address</label>
+                <input id="addressLine1" name="addressLine1" required autocomplete="address-line1"
+                       placeholder="House or flat number, street">
+            </div>
+
+            <div class="field">
+                <label for="addressLine2">Landmark <span class="muted">(optional)</span></label>
+                <input id="addressLine2" name="addressLine2" autocomplete="address-line2">
+            </div>
+
+            <div class="row-3">
+                <div class="field">
+                    <label for="city">City</label>
+                    <input id="city" name="city" required autocomplete="address-level2">
+                </div>
+                <div class="field">
+                    <label for="state">State</label>
+                    <input id="state" name="state" required autocomplete="address-level1">
+                </div>
+                <div class="field">
+                    <label for="pincode">PIN code</label>
+                    <input id="pincode" name="pincode" required pattern="[0-9]{6}" inputmode="numeric"
+                           autocomplete="postal-code" maxlength="6"
+                           th:attr="data-check-url=@{/api/delivery-areas/check}">
+                    <div class="hint" id="pincodeStatus" role="status" aria-live="polite"></div>
+                </div>
+            </div>
+
+            <div class="field" id="deliveryMapField" th:if="${googleMapsApiKey != null and !#strings.isEmpty(googleMapsApiKey)}"
+                 th:attr="data-store-lat=${storeLocation.hasPin() ? storeLocation.latitude : 20.5937},data-store-lng=${storeLocation.hasPin() ? storeLocation.longitude : 78.9629}">
+                <label>Drop a pin at your delivery location <span class="muted">(optional - helps our delivery partner find you)</span></label>
+                <div id="deliveryMap" class="map-frame lg"></div>
+                <p class="map-pin-hint">Drag the pin, or click the map, to set your exact location.</p>
+                <input type="hidden" id="latitude" name="latitude">
+                <input type="hidden" id="longitude" name="longitude">
+            </div>
+
+            <div class="field">
+                <label for="notes">Order notes <span class="muted">(optional)</span></label>
+                <textarea id="notes" name="notes" rows="2" maxlength="500"
+                          placeholder="Less spicy, gift wrap, delivery instructions…"></textarea>
+            </div>
+
+            <div class="form-actions">
+                <button class="btn lg" type="submit" th:if="${qrMode}">Place order — pay
+                    ₹<span th:text="${appliedCoupon != null} ? (${cart.total} - ${couponDiscount}) : ${cart.total}">0</span>
+                    by UPI QR</button>
+                <button class="btn lg" type="submit" th:if="${!qrMode and #strings.startsWith(gateway, 'PAYTM')}">Pay
+                    ₹<span th:text="${appliedCoupon != null} ? (${cart.total} - ${couponDiscount}) : ${cart.total}">0</span>
+                    with Paytm QR</button>
+                <button class="btn lg" type="submit" th:if="${!qrMode and !#strings.startsWith(gateway, 'PAYTM')}">Pay
+                    ₹<span th:text="${appliedCoupon != null} ? (${cart.total} - ${couponDiscount}) : ${cart.total}">0</span>
+                    with PhonePe</button>
+                <span class="muted small" th:if="${qrMode}">You'll get a QR code to scan on the next page. UPI carries no charge.</span>
+                <span class="muted small" th:if="${!qrMode and #strings.startsWith(gateway, 'PAYTM')}">You'll get a Paytm QR to scan on the next page — confirmed automatically.</span>
+                <span class="muted small" th:if="${!qrMode and !#strings.startsWith(gateway, 'PAYTM')}">UPI, card or net banking. UPI carries no charge.</span>
+            </div>
+        </form>
+
+        <div class="sticky-side">
+            <div class="panel">
+                <h3 class="mt-0">Order summary</h3>
+                <ul class="totals">
+                    <li th:each="line : ${cart.lines}">
+                        <span th:text="|${line.name} × ${line.quantity}|">Food</span>
+                        <span th:text="'₹' + ${line.lineTotal}">₹0</span>
+                    </li>
+                    <li th:classappend="${cart.freeShippingApplied} ? 'free' : ''">
+                        <span>Shipping</span>
+                        <span th:text="${cart.freeShippingApplied} ? 'Free' : '₹' + ${cart.shipping}">₹0</span>
+                    </li>
+                    <li th:if="${appliedCoupon != null}">
+                        <span th:text="|Coupon (${appliedCoupon})|">Coupon</span>
+                        <span th:text="'−₹' + ${couponDiscount}">−₹0</span></li>
+                    <li class="grand"><span>Total</span>
+                        <span th:text="'₹' + (${appliedCoupon != null} ? (${cart.total} - ${couponDiscount}) : ${cart.total})">₹0</span></li>
+                </ul>
+
+                <form th:if="${appliedCoupon != null}" th:action="@{/cart/coupon/remove}" method="post" class="mt-4">
+                    <input type="hidden" name="returnTo" value="/checkout">
+                    <div class="notice ok mb-0">
+                        <span class="ico">&#127991;</span>
+                        <span><strong th:text="${appliedCoupon}">CODE</strong> applied — saved
+                            ₹<span th:text="${couponDiscount}">0</span>.
+                            <button class="btn ghost sm" type="submit" style="margin-left:8px">Remove</button></span>
+                    </div>
+                </form>
+                <form th:unless="${appliedCoupon != null}" th:action="@{/cart/coupon}" method="post" class="row-2 mt-4">
+                    <input type="hidden" name="returnTo" value="/checkout">
+                    <input type="text" name="code" placeholder="Have a coupon code?"
+                           style="text-transform:uppercase" maxlength="32">
+                    <button class="btn ghost" type="submit">Apply</button>
+                </form>
+            </div>
+
+            <div class="notice info" th:if="${qrMode}">
+                <span class="ico">&#128241;</span>
+                <span>We use a UPI QR code for payment. After you place the order, scan the QR and
+                    enter the order ID as the payment note. It can take up to 24 hours for us to
+                    confirm your payment on the Orders page.</span>
+            </div>
+            <div class="notice info" th:if="${gateway == 'PHONEPE_MOCK'}">
+                <span class="ico">&#9881;</span>
+                <span>Mock payment mode is on, so no money will move. Set
+                    <code>payments.phonepe.mock=false</code> once your PhonePe credentials are in place.</span>
+            </div>
+            <div class="notice info" th:if="${gateway == 'PAYTM_MOCK'}">
+                <span class="ico">&#9881;</span>
+                <span>Mock payment mode is on, so no money will move. Set
+                    <code>payments.paytm.mock=false</code> once your Paytm merchant account is in place.</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+
+<script>
+    // Ask the server whether we deliver to this PIN code as soon as all six digits are in, so the
+    // customer hears "no" here - before an order is created and before any payment screen. The
+    // server checks again on submit; this is only the early warning.
+    (function () {
+        var input = document.getElementById('pincode');
+        var status = document.getElementById('pincodeStatus');
+        var buttons = input.form.querySelectorAll('button[type=submit]');
+        var url = input.getAttribute('data-check-url');
+        var latest = 0;
+
+        function block(blocked) {
+            buttons.forEach(function (b) { b.disabled = blocked; });
+        }
+        function clear() {
+            status.textContent = '';
+            status.className = 'hint';
+            block(false);
+        }
+        function check() {
+            var value = input.value.trim();
+            if (!/^[0-9]{6}$/.test(value)) {
+                clear();
+                return;
+            }
+            var mine = ++latest;
+            fetch(url + '?pincode=' + encodeURIComponent(value), { headers: { Accept: 'application/json' } })
+                .then(function (r) { return r.json(); })
+                .then(function (d) {
+                    if (mine !== latest) { return; }
+                    status.textContent = d.message;
+                    status.className = 'hint ' + (d.deliverable ? 'ok' : 'bad');
+                    block(!d.deliverable);
+                })
+                .catch(function () { if (mine === latest) { clear(); } });
+        }
+        input.addEventListener('input', check);
+        check();
+    })();
+</script>
+
+<script th:if="${googleMapsApiKey != null and !#strings.isEmpty(googleMapsApiKey)}"
+        th:src="@{'https://maps.googleapis.com/maps/api/js'(key=${googleMapsApiKey})}"></script>
+<script th:if="${googleMapsApiKey != null and !#strings.isEmpty(googleMapsApiKey)}">
+    // Lets a customer drop a precise delivery pin; entirely optional - the address fields above
+    // are what delivery actually goes by. Only loaded when GOOGLE_MAPS_API_KEY is configured.
+    (function () {
+        var field = document.getElementById('deliveryMapField');
+        if (!field || typeof google === 'undefined') { return; }
+        var center = { lat: parseFloat(field.dataset.storeLat), lng: parseFloat(field.dataset.storeLng) };
+        var map = new google.maps.Map(document.getElementById('deliveryMap'), { center: center, zoom: 13 });
+        var marker = new google.maps.Marker({ position: center, map: map, draggable: true });
+        var latInput = document.getElementById('latitude');
+        var lngInput = document.getElementById('longitude');
+
+        function setFromPosition(pos) {
+            latInput.value = pos.lat();
+            lngInput.value = pos.lng();
+        }
+        marker.addListener('dragend', function () { setFromPosition(marker.getPosition()); });
+        map.addListener('click', function (e) { marker.setPosition(e.latLng); setFromPosition(e.latLng); });
+    })();
+</script>
+</body>
+</html>

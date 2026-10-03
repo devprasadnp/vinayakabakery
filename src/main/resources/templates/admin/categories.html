@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/panel :: head('Categories')}"></head>
+<body>
+<div class="shell">
+    <aside th:replace="~{fragments/panel :: sidebar('categories')}"></aside>
+
+    <main class="work">
+        <div class="topbar">
+            <div>
+                <h1>Categories</h1>
+                <div class="crumb" th:text="|${categories.size()} categories|">0</div>
+            </div>
+            <a class="btn" th:href="@{/admin/categories/new}">+ New category</a>
+        </div>
+
+        <div class="work-body">
+            <div th:replace="~{fragments/panel :: flash}"></div>
+
+            <div class="notice info">
+                <span class="ico">&#8505;</span>
+                <span>These are the accordion sections shoppers browse by on the storefront - Veg Pickles,
+                    Non-Veg Pickles, Podi, Snacks, Cakes to start with. Add more any time; every food needs
+                    exactly one.</span>
+            </div>
+
+            <div class="empty" th:if="${categories.isEmpty()}">
+                <div class="ico">🏷️</div>
+                <h3>No categories yet</h3>
+                <p>Create one so foods have somewhere to live.</p>
+                <a class="btn" th:href="@{/admin/categories/new}">Create the first category</a>
+            </div>
+
+            <div class="table-wrap" th:unless="${categories.isEmpty()}">
+                <div class="table-scroll">
+                    <table class="data">
+                        <thead>
+                        <tr><th>Category</th><th>Dietary</th><th class="num">Order</th>
+                            <th class="num">Foods</th><th>Shown</th><th></th>
+                            <th sec:authorize="hasRole('SUPER_ADMIN')"></th></tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="c : ${categories}">
+                            <td>
+                                <div class="cell-title">
+                                    <span class="cell-thumb" th:text="${c.badge}">🏷️</span>
+                                    <strong th:text="${c.name}">Category</strong>
+                                </div>
+                            </td>
+                            <td>
+                                <span th:if="${c.veg != null and c.veg}" class="chip veg">
+                                    <span class="mark"></span><span>Veg only</span></span>
+                                <span th:if="${c.veg != null and !c.veg}" class="chip nonveg">
+                                    <span class="mark nonveg"></span><span>Non-veg only</span></span>
+                                <span class="muted small" th:if="${c.veg == null}">Either</span>
+                            </td>
+                            <td class="num" th:text="${c.displayOrder}">0</td>
+                            <td class="num" th:text="${categoryCounts.get(c.id)}">0</td>
+                            <td>
+                                <form th:action="@{'/admin/categories/' + ${c.id} + '/toggle'}" method="post">
+                                    <input type="hidden" name="active" th:value="${!c.active}">
+                                    <button type="submit" class="btn sm"
+                                            th:classappend="${c.active} ? 'subtle' : 'ghost'"
+                                            th:text="${c.active} ? 'Shown' : 'Hidden'">Shown</button>
+                                </form>
+                            </td>
+                            <td>
+                                <a class="btn ghost sm" th:href="@{'/admin/categories/' + ${c.id} + '/edit'}">Edit</a>
+                            </td>
+                            <td sec:authorize="hasRole('SUPER_ADMIN')">
+                                <form th:action="@{'/superadmin/categories/' + ${c.id} + '/archive'}" method="post"
+                                      onsubmit="return confirm('Archive this category? It disappears from the shop but nothing is deleted yet.');">
+                                    <button class="btn danger-ghost sm" type="submit">Archive</button>
+                                </form>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+</body>
+</html>

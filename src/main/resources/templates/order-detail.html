@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(${order.orderNumber})}"></head>
+<body>
+<header th:replace="~{fragments/layout :: header('orders')}"></header>
+<div th:replace="~{fragments/layout :: flash}"></div>
+
+<div class="wrap section">
+    <p class="muted small"><a th:href="@{/orders}">← All orders</a></p>
+
+    <div class="section-head">
+        <div>
+            <h2 class="mb-0" th:text="${order.orderNumber}">HP-…</h2>
+            <p>Placed <span th:text="${#temporals.format(order.placedAt, 'dd MMM yyyy')}">01 Jan 2026</span>
+                at <span th:text="${#temporals.format(order.placedAt, 'HH:mm')}">00:00</span></p>
+        </div>
+        <span class="status" th:classappend="${order.status.name()}" th:text="${order.status}">PAID</span>
+    </div>
+
+    <div class="notice ok" th:if="${order.status.name() == 'PAID'}">
+        <span class="ico">&#10003;</span>
+        <span>Payment received. We will pack and dispatch within two working days.</span>
+    </div>
+    <div class="notice bad" th:if="${order.status.name() == 'PAYMENT_FAILED'}">
+        <span class="ico">&#9888;</span>
+        <span>The payment did not go through and nothing was charged. You can try again below.</span>
+    </div>
+    <div class="notice info" th:if="${order.status.name() == 'PENDING_PAYMENT' and qrMode}">
+        <span class="ico">&#8987;</span>
+        <span>Order placed — it will be confirmed once we match your UPI payment (order ID in the
+            payment note). This usually takes up to
+            <span th:text="${paymentProperties.confirmationHours}">24</span> hours to reflect here.
+            Not paid yet? <a th:href="@{'/orders/' + ${order.orderNumber} + '/pay-qr'}">Scan the QR to pay</a>.</span>
+    </div>
+    <div class="notice info" th:if="${order.status.name() == 'PENDING_PAYMENT' and !qrMode}">
+        <span class="ico">&#8987;</span>
+        <span>We are still waiting for PhonePe to confirm this payment.</span>
+    </div>
+
+    <div class="split">
+        <div class="table-wrap">
+            <div class="table-scroll">
+                <table class="data">
+                    <thead><tr><th>Food</th><th>Unit</th><th>Jars</th><th class="num">Total</th></tr></thead>
+                    <tbody>
+                    <tr th:each="i : ${order.items}">
+                        <td>
+                            <strong th:text="${i.productName}">Food</strong>
+                            <div class="sub" th:text="|${i.pickleType.label} · ${i.weightGrams} g · ${i.sku}|"></div>
+                        </td>
+                        <td class="nowrap" th:text="${T(com.harish.pickles.dto.Money).format(i.unitPricePaise)}">₹0</td>
+                        <td th:text="${i.quantity}">1</td>
+                        <td class="num nowrap"
+                            th:text="${T(com.harish.pickles.dto.Money).format(i.lineTotalPaise)}">₹0</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div>
+            <div class="panel">
+                <h3 class="mt-0">Payment</h3>
+                <ul class="totals">
+                    <li><span>Subtotal</span>
+                        <span th:text="${T(com.harish.pickles.dto.Money).format(order.subtotalPaise)}">₹0</span></li>
+                    <li th:classappend="${order.shippingPaise == 0} ? 'free' : ''"><span>Shipping</span>
+                        <span th:text="${order.shippingPaise == 0} ? 'Free'
+                              : ${T(com.harish.pickles.dto.Money).format(order.shippingPaise)}">₹0</span></li>
+                    <li th:if="${order.discountPaise != null and order.discountPaise > 0}">
+                        <span th:text="|Coupon (${order.couponCode})|">Coupon</span>
+                        <span th:text="'−' + ${T(com.harish.pickles.dto.Money).format(order.discountPaise)}">−₹0</span></li>
+                    <li class="grand"><span>Total</span>
+                        <span th:text="${T(com.harish.pickles.dto.Money).format(order.totalPaise)}">₹0</span></li>
+                </ul>
+
+                <div class="small muted mt-4" th:if="${payment != null}">
+                    <div>Gateway: <span th:text="${payment.provider}">PHONEPE</span></div>
+                    <div>Payment status:
+                        <span class="status" th:classappend="${payment.status.name()}"
+                              th:text="${payment.status}">PENDING</span></div>
+                    <div th:if="${payment.transactionId != null}">Txn: <span th:text="${payment.transactionId}"></span></div>
+                    <div th:if="${payment.paymentMode != null}">Mode: <span th:text="${payment.paymentMode}"></span></div>
+                    <div th:if="${payment.errorCode != null}">Error: <span th:text="${payment.errorCode}"></span></div>
+                </div>
+
+                <a th:href="@{'/orders/' + ${order.orderNumber} + '/pay-qr'}"
+                   th:if="${order.payable and qrMode}" class="btn block mt-4">Scan QR to pay</a>
+
+                <form th:action="@{'/orders/' + ${order.orderNumber} + '/retry-payment'}" method="post"
+                      th:if="${order.payable and !qrMode}" class="mt-4">
+                    <button class="btn block" type="submit">Pay now</button>
+                </form>
+            </div>
+
+            <div class="panel">
+                <h3 class="mt-0">Delivering to</h3>
+                <p class="mb-0">
+                    <strong th:text="${order.shippingAddress.contactName}"></strong><br>
+                    <span th:text="${order.shippingAddress.singleLine}"></span><br>
+                    <span class="muted" th:text="${order.shippingAddress.contactPhone}"></span>
+                </p>
+                <a th:if="${order.shippingAddress.hasPin()}"
+                   th:href="|https://www.google.com/maps?q=${order.shippingAddress.latitude},${order.shippingAddress.longitude}|"
+                   target="_blank" rel="noopener" class="small">View dropped pin on map →</a>
+                <p class="muted small mt-4 mb-0" th:if="${order.notes != null}" th:text="|Note: ${order.notes}|"></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

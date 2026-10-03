@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:fragment="head(title)">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#EA580C">
+    <title th:text="|${title} · Sri Vinayaka Bakery Home|">Sri Vinayaka Bakery Home</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+
+<!-- ======================================================= storefront header -->
+<header class="site" th:fragment="header(active)">
+    <div class="bar">
+        <a class="logo" th:href="@{/}">
+            <span class="logo-mark"></span>
+            <span>Sri Vinayaka <em>Bakery</em></span>
+        </a>
+
+        <nav class="main">
+            <a th:href="@{/products}" th:classappend="${active == 'all'} ? 'active' : ''">All</a>
+            <a th:href="@{/products(type='VEG')}" th:classappend="${active == 'veg'} ? 'active' : ''">Veg</a>
+            <a th:href="@{/products(type='NON_VEG')}" th:classappend="${active == 'nonveg'} ? 'active' : ''">Non-Veg</a>
+            <a sec:authorize="isAuthenticated()" th:href="@{/orders}"
+               th:classappend="${active == 'orders'} ? 'active' : ''">My orders</a>
+            <a sec:authorize="hasRole('ADMIN')" th:href="@{/admin}">Admin panel</a>
+            <a sec:authorize="hasRole('DELIVERY_PARTNER')" th:href="@{/delivery}"
+               th:classappend="${active == 'delivery'} ? 'active' : ''">My deliveries</a>
+
+            <a class="cart-link" th:href="@{/cart}" th:classappend="${active == 'cart'} ? 'active' : ''">
+                Cart
+                <span class="badge-count" th:if="${cartCount != null and cartCount > 0}" th:text="${cartCount}">0</span>
+            </a>
+
+            <span sec:authorize="!isAuthenticated()" class="stack tight">
+                <a th:href="@{/login}">Sign in</a>
+                <a class="btn sm" th:href="@{/register}">Create account</a>
+            </span>
+
+            <span sec:authorize="isAuthenticated()" class="who">
+                <span class="avatar" th:classappend="${currentUser != null and currentUser.role.staff} ? 'staff' : ''"
+                      th:text="${currentUser != null} ? ${#strings.substring(currentUser.fullName,0,1)} : '?'">A</span>
+                <span class="small">
+                    <strong th:text="${currentUser != null} ? ${currentUser.fullName} : ''">Name</strong><br>
+                    <span class="muted" th:text="${currentUser != null} ? ${currentUser.role.label} : ''">Customer</span>
+                </span>
+                <form th:action="@{/logout}" method="post">
+                    <button class="btn ghost sm" type="submit">Sign out</button>
+                </form>
+            </span>
+        </nav>
+    </div>
+</header>
+
+<!-- ========================================================== flash messages -->
+<div th:fragment="flash" class="wrap" th:if="${message != null or error != null or generatedPassword != null}"
+     style="padding-top:16px">
+    <div class="notice ok" th:if="${message}">
+        <span class="ico">&#10003;</span><span th:text="${message}"></span>
+    </div>
+    <div class="notice bad" th:if="${error}">
+        <span class="ico">&#9888;</span><span th:text="${error}"></span>
+    </div>
+    <div class="notice info" th:if="${generatedPassword}">
+        <span class="ico">&#128273;</span>
+        <span>New password: <code th:text="${generatedPassword}"></code> &mdash; copy it now, it is not shown again.</span>
+    </div>
+</div>
+
+<!-- ============================================================= product card -->
+<div th:fragment="productCard(product)" class="card">
+    <div class="thumb" th:classappend="${product.veg} ? '' : 'nonveg'">
+        <img th:if="${product.hasPhoto}" th:src="${product.displayImageUrl}" th:alt="${product.name}">
+        <span class="glyph" th:unless="${product.hasPhoto}" th:text="${product.veg} ? '🥭' : '🍗'">🥭</span>
+        <span class="corner chip" th:classappend="${product.veg} ? 'veg' : 'nonveg'">
+            <span class="mark" th:classappend="${product.veg} ? '' : 'nonveg'"></span>
+            <span th:text="${product.pickleType.label}">Veg</span>
+        </span>
+        <span class="save" th:if="${product.discountPercent > 0}"
+              th:text="|${product.discountPercent}% off|">10% off</span>
+    </div>
+    <div class="body">
+        <h3><a th:href="@{'/products/' + ${product.slug}}" th:text="${product.name}">Food</a></h3>
+        <div class="meta"
+             th:text="|${product.inventoryCategory.badge} ${product.inventoryCategory.name} · ${product.weightGrams} g · ${product.spiceLevel.label}|">500 g</div>
+        <div class="price">
+            <span th:text="${T(com.harish.pickles.dto.Money).format(product.pricePaise)}">₹0</span>
+            <span class="mrp" th:if="${product.mrpPaise != null and product.discountPercent > 0}"
+                  th:text="${T(com.harish.pickles.dto.Money).format(product.mrpPaise)}">₹0</span>
+        </div>
+        <div class="meta" style="color:var(--red-700)" th:if="${!product.inStock}">Out of stock</div>
+        <form th:action="@{/cart/add}" method="post" th:if="${product.inStock}">
+            <input type="hidden" name="productId" th:value="${product.id}">
+            <input type="hidden" name="quantity" value="1">
+            <button class="btn block" type="submit">Add to cart</button>
+        </form>
+    </div>
+</div>
+
+<!-- ================================================================== footer -->
+<footer class="site" th:fragment="footer">
+    <div class="wrap cols">
+        <div>
+            <strong>Sri Vinayaka Bakery Home</strong><br>
+            Freshly baked cakes, pastries &amp; snacks, made every day.<br>
+            FSSAI licensed · Ships across India
+        </div>
+        <div>
+            <strong>Shop</strong><br>
+            <a th:href="@{/products}">All</a><br>
+            <th:block th:each="c : ${footerCategories}">
+                <a th:href="@{/products(categoryId=${c.id})}" th:text="${c.name}">Category</a><br>
+            </th:block>
+            <a th:href="@{/orders}">Track an order</a>
+        </div>
+        <div>
+            <strong>Payments</strong><br>
+            <span th:if="${qrMode}">Scan our UPI QR at checkout — no extra charge.</span>
+            <span th:unless="${qrMode}">UPI, cards and net banking.<br>UPI carries no extra charge.</span><br>
+            <a th:href="@{/swagger-ui.html}">Developer API</a>
+        </div>
+        <div th:if="${storeLocation != null and storeLocation.hasPin()}">
+            <strong th:text="${storeLocation.label != null} ? ${storeLocation.label} : 'Visit us'">Visit us</strong><br>
+            <span th:if="${storeLocation.address != null}" th:text="${storeLocation.address}">Address</span>
+            <div class="map-frame sm mt-4" th:if="${googleMapsApiKey != null and !#strings.isEmpty(googleMapsApiKey)}">
+                <iframe loading="lazy" referrerpolicy="no-referrer-when-downgrade"
+                        th:src="@{'https://www.google.com/maps/embed/v1/place'(key=${googleMapsApiKey},q=${storeLocation.latitude + ',' + storeLocation.longitude})}"></iframe>
+            </div>
+            <a th:unless="${googleMapsApiKey != null and !#strings.isEmpty(googleMapsApiKey)}"
+               th:href="|https://www.google.com/maps?q=${storeLocation.latitude},${storeLocation.longitude}|"
+               target="_blank" rel="noopener">Open in Google Maps →</a>
+        </div>
+    </div>
+</footer>
+
+</body>
+</html>

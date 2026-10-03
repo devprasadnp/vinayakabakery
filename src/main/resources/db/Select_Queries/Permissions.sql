@@ -1,0 +1,5 @@
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO cjgwzcmo_homeuser ;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO cjgwzcmo_homeuser ;
+GRANT ALL PRIVILEGES ON DATABASE cjgwzcmo_home TO cjgwzcmo_homeuser ;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO cjgwzcmo_homeuser ;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO cjgwzcmo_homeuser ;

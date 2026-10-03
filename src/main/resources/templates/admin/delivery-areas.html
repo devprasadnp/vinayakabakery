@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/panel :: head('Delivery areas')}"></head>
+<body>
+<div class="shell">
+    <aside th:replace="~{fragments/panel :: sidebar('areas')}"></aside>
+
+    <main class="work">
+        <div class="topbar">
+            <div>
+                <h1>Delivery areas</h1>
+                <div class="crumb" th:text="|${activeCount} active PIN code(s)|">0</div>
+            </div>
+            <a class="btn ghost" th:href="@{/admin/delivery-partners}">Delivery partners →</a>
+        </div>
+
+        <div class="work-body">
+            <div th:replace="~{fragments/panel :: flash}"></div>
+
+            <!-- ============================================ the on/off switch -->
+            <div class="notice ok" th:if="${restricted and activeCount > 0}">
+                <span class="ico">&#128205;</span>
+                <span><strong>Delivery is limited to the PIN codes below.</strong> A customer whose address is
+                    anywhere else is stopped at checkout, before payment, and told we have no delivery partner there.
+                    An order that is <em>already waiting for payment</em> in an area you stop serving is cancelled,
+                    and its stock returned, the moment its customer clicks to pay.</span>
+            </div>
+            <div class="notice bad" th:if="${restricted and activeCount == 0}">
+                <span class="ico">&#9888;</span>
+                <span><strong>No PIN code is active, so nobody can check out.</strong> Resume or add a PIN code below.</span>
+            </div>
+            <div class="notice info" th:unless="${restricted}">
+                <span class="ico">&#8505;</span>
+                <span><strong>Delivery is not limited yet.</strong> Customers can order from any PIN code. Add the PIN codes
+                    you serve, then switch the limit on.</span>
+            </div>
+
+            <form th:action="@{/admin/delivery-areas/restriction}" method="post" class="mb-4">
+                <input type="hidden" name="enabled" th:value="${!restricted}">
+                <button type="submit" class="btn" th:if="${!restricted}">Only deliver to these PIN codes</button>
+                <button type="submit" class="btn ghost" th:if="${restricted}">Turn the limit off (deliver anywhere)</button>
+            </form>
+
+            <div class="split">
+                <!-- ================================================== the list -->
+                <div>
+                    <form class="filters" th:action="@{/admin/delivery-areas}" method="get">
+                        <input type="search" name="q" placeholder="Search by PIN code or area" th:value="${q}">
+                        <button class="btn ghost" type="submit">Search</button>
+                        <a class="btn ghost" th:if="${q != null and !q.isEmpty()}"
+                           th:href="@{/admin/delivery-areas}">Clear</a>
+                    </form>
+
+                    <div class="empty" th:if="${pincodes.isEmpty()}">
+                        <div class="ico">&#128205;</div>
+                        <h3 th:text="${q != null and !q.isEmpty()} ? 'No PIN code matches' : 'No PIN codes yet'">No PIN codes yet</h3>
+                        <p th:text="${q != null and !q.isEmpty()} ? 'Try a different search.' : 'Add the PIN codes you deliver to using the form.'"></p>
+                    </div>
+
+                    <div class="table-wrap" th:unless="${pincodes.isEmpty()}">
+                        <div class="table-scroll">
+                            <table class="data">
+                                <thead>
+                                <tr><th>PIN code</th><th>Area</th><th>Status</th><th></th></tr>
+                                </thead>
+                                <tbody>
+                                <tr th:each="p : ${pincodes.content}">
+                                    <td><strong th:text="${p.pincode}">560001</strong></td>
+                                    <td th:text="${p.areaName} ?: '—'">—</td>
+                                    <td>
+                                        <span class="status" th:classappend="${p.active} ? 'PAID' : 'CANCELLED'"
+                                              th:text="${p.active} ? 'Active' : 'Paused'">Active</span>
+                                    </td>
+                                    <td>
+                                        <div class="stack tight">
+                                            <form th:action="@{'/admin/delivery-areas/' + ${p.id} + '/toggle'}" method="post">
+                                                <input type="hidden" name="active" th:value="${!p.active}">
+                                                <button class="btn ghost sm" type="submit"
+                                                        th:text="${p.active} ? 'Pause' : 'Resume'">Pause</button>
+                                            </form>
+                                            <form th:action="@{'/admin/delivery-areas/' + ${p.id} + '/delete'}" method="post"
+                                                  onsubmit="return confirm('Remove this PIN code? Customers in it will no longer be able to check out.');">
+                                                <button class="btn danger-ghost sm" type="submit">Remove</button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="stack mt-4" th:if="${pincodes.totalPages > 1}">
+                        <a class="btn ghost sm" th:if="${!pincodes.first}"
+                           th:href="@{/admin/delivery-areas(q=${q}, page=${pincodes.number - 1})}">← Previous</a>
+                        <span class="muted small" th:text="|Page ${pincodes.number + 1} of ${pincodes.totalPages}|"></span>
+                        <a class="btn ghost sm" th:if="${!pincodes.last}"
+                           th:href="@{/admin/delivery-areas(q=${q}, page=${pincodes.number + 1})}">Next →</a>
+                    </div>
+                </div>
+
+                <!-- =================================================== add form -->
+                <form class="panel sticky-side" th:action="@{/admin/delivery-areas}" method="post">
+                    <div class="panel-head"><h3>Add PIN codes</h3></div>
+                    <div class="field">
+                        <label for="pincodes">PIN codes</label>
+                        <textarea id="pincodes" name="pincodes" rows="4" required
+                                  placeholder="533001, 533002&#10;533003"></textarea>
+                        <div class="hint">One or many — separate with commas, spaces or new lines.</div>
+                    </div>
+                    <div class="field">
+                        <label for="areaName">Area name <span class="muted">(optional)</span></label>
+                        <input id="areaName" name="areaName" maxlength="120" placeholder="e.g. Kakinada">
+                        <div class="hint">Applied to every PIN code you add in this go.</div>
+                    </div>
+                    <div class="form-actions">
+                        <button class="btn" type="submit">Add</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+</div>
+</body>
+</html>

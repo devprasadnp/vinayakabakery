@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/panel :: head(${account == null} ? (${kind == 'partner'} ? 'Add a delivery partner' : 'Add a customer') : 'Manage account')}"></head>
+<body>
+<div class="shell">
+    <aside th:replace="~{fragments/panel :: sidebar(${activePage})}"></aside>
+
+    <main class="work">
+        <div class="topbar">
+            <div>
+                <h1 th:text="${account == null} ? (${kind == 'partner'} ? 'Add a delivery partner' : 'Add a customer') : ${account.fullName}">Add</h1>
+                <div class="crumb" th:text="${account == null}
+                     ? 'They can sign in as soon as you save'
+                     : (${canEditDetails} ? 'Update details, reset the password, or block sign-in' : 'Reset the password')">Details</div>
+            </div>
+            <a class="btn ghost" th:href="@{${basePath}}">← Back to the list</a>
+        </div>
+
+        <div class="work-body">
+            <div th:replace="~{fragments/panel :: flash}"></div>
+
+            <!-- ================================================ create an account -->
+            <div class="split" th:if="${account == null}">
+                <form class="panel" th:action="@{${basePath}}" method="post">
+                    <div class="panel-head">
+                        <h3 th:text="${kind == 'partner'} ? 'New delivery partner' : 'New customer'">New account</h3>
+                    </div>
+
+                    <div class="field">
+                        <label for="fullName">Full name</label>
+                        <input id="fullName" name="fullName" required maxlength="120" autofocus>
+                    </div>
+                    <div class="row-2">
+                        <div class="field">
+                            <label for="email">Email</label>
+                            <input id="email" name="email" type="email" required maxlength="160">
+                            <div class="hint">This is what they sign in with.</div>
+                        </div>
+                        <div class="field">
+                            <label for="phone">Mobile number</label>
+                            <input id="phone" name="phone" pattern="[6-9][0-9]{9}" inputmode="numeric"
+                                   placeholder="10 digits" th:required="${kind == 'partner'}">
+                            <div class="hint" th:if="${kind == 'partner'}">Customers may need to reach them.</div>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label for="password">Password</label>
+                        <input id="password" name="password" required minlength="8" maxlength="72"
+                               th:value="${suggestedPassword}">
+                        <div class="hint">We suggested a strong one. Copy it before you save — pass it on
+                            and ask them to change it. They can also use "Forgot your password?" on the sign-in page.</div>
+                    </div>
+                    <div class="field inline-check">
+                        <label><input type="checkbox" name="enabled" value="true" checked>
+                            Allow this person to sign in</label>
+                    </div>
+
+                    <div class="form-actions">
+                        <button class="btn lg" type="submit">Create account</button>
+                        <a class="btn ghost" th:href="@{${basePath}}">Cancel</a>
+                    </div>
+                </form>
+
+                <div class="panel sticky-side">
+                    <h3 class="mt-0">What this does</h3>
+                    <p class="small muted" th:if="${kind == 'partner'}">Creates a delivery partner who signs in at the
+                        normal sign-in page and lands on <strong>My deliveries</strong>. They see only the orders you
+                        hand to them, and can mark those picked up or delivered. Add as many partners as you need —
+                        just come back here for the next one. No email is sent, so share the password yourself.</p>
+                    <p class="small muted" th:unless="${kind == 'partner'}">Creates a customer who can sign in, build a
+                        cart and check out exactly like someone who registered themselves. No email is sent, so share
+                        the password yourself.</p>
+                    <p class="small muted mb-0">Admin accounts are not created here on purpose.</p>
+                </div>
+            </div>
+
+            <!-- ================================================= manage an account -->
+            <div class="split" th:if="${account != null}">
+                <div>
+                    <!-- Details: editable only where the acting role is allowed to edit -->
+                    <form class="panel" th:if="${canEditDetails}"
+                          th:action="@{'/admin/accounts/' + ${account.id}}" method="post">
+                        <div class="panel-head">
+                            <h3>Details</h3>
+                            <span class="chip" th:classappend="${account.role.name() == 'SUPER_ADMIN'} ? 'solid-brand'
+                                  : (${account.role.name() == 'ADMIN'} ? 'veg'
+                                  : (${account.role.name() == 'DELIVERY_PARTNER'} ? 'spice' : ''))"
+                                  th:text="${account.role.label}">Customer</span>
+                        </div>
+
+                        <div class="field">
+                            <label for="fullNameEdit">Full name</label>
+                            <input id="fullNameEdit" name="fullName" required maxlength="120"
+                                   th:value="${account.fullName}">
+                        </div>
+                        <div class="row-2">
+                            <div class="field">
+                                <label for="emailEdit">Email</label>
+                                <input id="emailEdit" name="email" type="email" required maxlength="160"
+                                       th:value="${account.email}">
+                            </div>
+                            <div class="field">
+                                <label for="phoneEdit">Mobile number</label>
+                                <input id="phoneEdit" name="phone" pattern="[6-9][0-9]{9}" inputmode="numeric"
+                                       th:required="${account.role.name() == 'DELIVERY_PARTNER'}"
+                                       th:value="${account.phone}">
+                            </div>
+                        </div>
+                        <div class="field inline-check">
+                            <label><input type="checkbox" name="enabled" value="true"
+                                          th:checked="${account.enabled}">
+                                Allow this person to sign in</label>
+                        </div>
+                        <div class="form-actions">
+                            <button class="btn" type="submit">Save changes</button>
+                        </div>
+                    </form>
+
+                    <!-- Read-only summary for accounts an admin may only reset (customers) -->
+                    <div class="panel" th:unless="${canEditDetails}">
+                        <div class="panel-head">
+                            <h3>Details</h3>
+                            <span class="chip" th:text="${account.role.label}">Customer</span>
+                        </div>
+                        <ul class="totals">
+                            <li><span>Name</span><span th:text="${account.fullName}">Name</span></li>
+                            <li><span>Email</span><span th:text="${account.email}">a@b.in</span></li>
+                            <li><span>Mobile</span><span th:text="${account.phone} ?: '—'">—</span></li>
+                        </ul>
+                        <p class="small muted mt-4 mb-0">Only a super admin can edit a customer's details.
+                            You can reset their password below.</p>
+                    </div>
+
+                    <form class="panel" th:action="@{'/admin/accounts/' + ${account.id} + '/password'}"
+                          method="post">
+                        <div class="panel-head"><h3>Reset password</h3></div>
+                        <p class="small muted">The person is not notified. Pass the new password on yourself
+                            and ask them to change it after signing in. They can also use
+                            "Forgot your password?" on the sign-in page to get an emailed link.</p>
+                        <div class="field">
+                            <label for="newPassword">New password</label>
+                            <input id="newPassword" name="newPassword" minlength="8" maxlength="72"
+                                   th:value="${suggestedPassword}">
+                            <div class="hint">8 to 72 characters.</div>
+                        </div>
+                        <div class="form-actions">
+                            <button class="btn" type="submit">Set this password</button>
+                            <button class="btn ghost" type="submit" name="generate" value="true">
+                                Generate one instead</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="sticky-side">
+                    <div class="panel">
+                        <h3 class="mt-0">Account</h3>
+                        <ul class="totals">
+                            <li><span>Role</span><span th:text="${account.role.label}">Customer</span></li>
+                            <li><span>Status</span>
+                                <span th:text="${account.enabled} ? 'Active' : 'Blocked'">Active</span></li>
+                            <li><span>Joined</span>
+                                <span th:text="${#temporals.format(account.createdAt, 'dd MMM yyyy')}"></span></li>
+                        </ul>
+                        <p class="small muted mt-4 mb-0">Roles cannot be changed from here — promoting or
+                            demoting staff is deliberately kept out of this screen.</p>
+                    </div>
+
+                    <div class="panel danger-box" th:if="${canEditDetails}">
+                        <h3>Sign-in access</h3>
+                        <p class="small" th:if="${account.enabled}">Blocking keeps the account and its order
+                            history but stops this person signing in.</p>
+                        <p class="small" th:unless="${account.enabled}">This account is currently blocked from
+                            signing in.</p>
+                        <form th:action="@{'/admin/accounts/' + ${account.id} + '/enabled'}" method="post">
+                            <input type="hidden" name="enabled" th:value="${!account.enabled}">
+                            <button type="submit" class="btn block"
+                                    th:classappend="${account.enabled} ? 'danger' : ''"
+                                    th:text="${account.enabled} ? 'Block sign-in' : 'Allow sign-in again'">
+                                Block sign-in</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+</body>
+</html>

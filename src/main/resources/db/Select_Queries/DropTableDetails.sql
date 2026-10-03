@@ -1,0 +1,14 @@
+DROP TABLE IF EXISTS order_items;
+DROP TABLE IF EXISTS product_images;
+DROP TABLE IF EXISTS app_settings;
+DROP TABLE IF EXISTS coupon_redemptions;
+DROP TABLE IF EXISTS coupons;
+DROP TABLE IF EXISTS payments;
+DROP TABLE IF EXISTS cart_items;
+DROP TABLE IF EXISTS products;
+DROP TABLE IF EXISTS inventory_categories;
+DROP TABLE IF EXISTS delivery_pincodes;
+DROP TABLE IF EXISTS orders;
+DROP TABLE IF EXISTS password_reset_tokens;
+DROP TABLE IF EXISTS flyway_schema_history;
+DROP TABLE IF EXISTS users;

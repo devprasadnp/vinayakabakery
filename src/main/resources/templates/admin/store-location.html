@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/panel :: head('Store location')}"></head>
+<body>
+<div class="shell">
+    <aside th:replace="~{fragments/panel :: sidebar('store-location')}"></aside>
+
+    <main class="work">
+        <div class="topbar">
+            <div>
+                <h1>Store location</h1>
+                <div class="crumb">Shown on the storefront footer and used to centre the checkout delivery-pin map</div>
+            </div>
+        </div>
+
+        <div class="work-body">
+            <div th:replace="~{fragments/panel :: flash}"></div>
+
+            <div class="notice info" th:unless="${mapsConfigured}">
+                <span class="ico">&#8505;</span>
+                <span><strong>No Google Maps API key is configured</strong> (<code>GOOGLE_MAPS_API_KEY</code>), so
+                    the map preview below is unavailable - enter the latitude and longitude by hand instead
+                    (for example from Google Maps: right-click the spot → the coordinates are the top entry
+                    in the menu). The footer and checkout map both light up automatically once a key is set.</span>
+            </div>
+
+            <div class="split">
+                <form class="panel" th:action="@{/admin/store-location}" method="post">
+                    <h2 class="mt-0">Location</h2>
+
+                    <div class="field">
+                        <label for="label">Name shown to customers <span class="muted">(optional)</span></label>
+                        <input id="label" name="label" maxlength="120" placeholder="Sri Vinayaka Bakery Home"
+                               th:value="${location.label}">
+                    </div>
+
+                    <div class="field">
+                        <label for="address">Address <span class="muted">(optional, shown under the map)</span></label>
+                        <textarea id="address" name="address" rows="2" maxlength="300"
+                                  placeholder="Shop no, street, city, PIN code" th:text="${location.address}"></textarea>
+                    </div>
+
+                    <div class="row-2">
+                        <div class="field">
+                            <label for="latitude">Latitude</label>
+                            <input id="latitude" name="latitude" type="number" step="0.000001" min="-90" max="90"
+                                   th:value="${location.latitude}" placeholder="e.g. 16.5062">
+                        </div>
+                        <div class="field">
+                            <label for="longitude">Longitude</label>
+                            <input id="longitude" name="longitude" type="number" step="0.000001" min="-180" max="180"
+                                   th:value="${location.longitude}" placeholder="e.g. 80.6480">
+                        </div>
+                    </div>
+                    <div class="field hint" th:if="${mapsConfigured}">Drag the pin on the map to fill these in.</div>
+
+                    <div class="form-actions">
+                        <button class="btn" type="submit">Save</button>
+                        <span class="muted small">Leave latitude and longitude blank to remove the pin.</span>
+                    </div>
+                </form>
+
+                <div class="sticky-side" id="storeLocationMapField"
+                     th:if="${mapsConfigured}"
+                     th:attr="data-lat=${location.latitude != null ? location.latitude : 20.5937},data-lng=${location.longitude != null ? location.longitude : 78.9629}">
+                    <div class="panel">
+                        <h3 class="mt-0">Drag the pin to set the exact spot</h3>
+                        <div id="storeLocationMap" class="map-frame lg"></div>
+                        <p class="map-pin-hint">The pin starts at the saved location, or the centre of India if none is set yet.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script th:if="${mapsConfigured}" th:src="@{'https://maps.googleapis.com/maps/api/js'(key=${googleMapsApiKey})}"></script>
+<script th:if="${mapsConfigured}">
+(function () {
+    var field = document.getElementById('storeLocationMapField');
+    if (!field || typeof google === 'undefined') { return; }
+    var center = { lat: parseFloat(field.dataset.lat), lng: parseFloat(field.dataset.lng) };
+    var map = new google.maps.Map(document.getElementById('storeLocationMap'), { center: center, zoom: 15 });
+    var marker = new google.maps.Marker({ position: center, map: map, draggable: true });
+    var latInput = document.getElementById('latitude');
+    var lngInput = document.getElementById('longitude');
+
+    function setFromPosition(pos) {
+        latInput.value = pos.lat().toFixed(6);
+        lngInput.value = pos.lng().toFixed(6);
+    }
+    marker.addListener('dragend', function () { setFromPosition(marker.getPosition()); });
+    map.addListener('click', function (e) { marker.setPosition(e.latLng); setFromPosition(e.latLng); });
+})();
+</script>
+</body>
+</html>

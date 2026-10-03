@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Sign in')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: header('')}"></header>
+<div th:replace="~{fragments/layout :: flash}"></div>
+
+<div class="section">
+    <div class="wrap-narrow">
+        <h2 class="center">Welcome back</h2>
+        <p class="center muted">Sign in to see your orders and check out faster.</p>
+
+        <div class="notice bad" th:if="${param.error}">
+            <span class="ico">&#9888;</span><span>That email and password did not match. Please try again.</span>
+        </div>
+        <div class="notice ok" th:if="${param.loggedOut}">
+            <span class="ico">&#10003;</span><span>You have been signed out.</span>
+        </div>
+
+        <form class="panel mt-4" th:action="@{/login}" method="post">
+            <div class="field">
+                <label for="email">Email</label>
+                <input id="email" name="email" type="email" required autofocus autocomplete="username">
+            </div>
+            <div class="field">
+                <label for="password">Password</label>
+                <input id="password" name="password" type="password" required autocomplete="current-password">
+                <div class="hint"><a th:href="@{/forgot-password}">Forgot your password?</a></div>
+            </div>
+            <button class="btn lg block" type="submit">Sign in</button>
+            <p class="center muted small mt-4 mb-0">
+                New here? <a th:href="@{/register}">Create an account</a>
+            </p>
+        </form>
+
+        <div class="notice info mt-4">
+            <span class="ico">&#8505;</span>
+            <span>Demo customer: <code>customer@srivinayakabakeryhome.com</code> / <code>Customer@123</code></span>
+        </div>
+    </div>
+</div>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

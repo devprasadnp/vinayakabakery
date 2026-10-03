@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/panel :: head('Compose mail')}"></head>
+<body>
+<div class="shell">
+    <aside th:replace="~{fragments/panel :: sidebar('mail-compose')}"></aside>
+
+    <main class="work">
+        <div class="topbar">
+            <div>
+                <h1>Compose mail</h1>
+                <div class="crumb">Sent from hello@srivinayakabakeryhome.com</div>
+            </div>
+            <a class="btn ghost" th:href="@{/admin/mail}">&larr; Back to mail</a>
+        </div>
+
+        <div class="work-body">
+            <div th:replace="~{fragments/panel :: flash}"></div>
+
+            <form class="card stack" th:action="@{/admin/mail/compose}" method="post" style="max-width:640px">
+                <div class="body stack">
+                    <label>To
+                        <input type="email" name="to" required placeholder="someone@example.com">
+                    </label>
+                    <label>Subject
+                        <input type="text" name="subject" required maxlength="200">
+                    </label>
+                    <label>Message
+                        <textarea name="body" rows="10" required></textarea>
+                    </label>
+                    <button class="btn" type="submit">Send</button>
+                </div>
+            </form>
+        </div>
+    </main>
+</div>
+</body>
+</html>

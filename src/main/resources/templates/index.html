@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Home')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: header('home')}"></header>
+<div th:replace="~{fragments/layout :: flash}"></div>
+
+<section class="hero">
+    <div class="wrap">
+        <span class="eyebrow">Baked fresh daily · No preservatives</span>
+        <h1>Freshly baked, the way a bakery should be.</h1>
+        <p>Cakes, pastries, cookies and snacks baked in small batches every day.
+            Eggless (veg) and egg (non-veg) bakes, delivered the day they are made.</p>
+        <div class="btn-row">
+            <a class="btn lg" th:href="@{/products(type='VEG')}">Shop eggless</a>
+            <a class="btn lg danger" th:href="@{/products(type='NON_VEG')}">Shop egg bakes</a>
+        </div>
+    </div>
+</section>
+
+<th:block th:each="section, iter : ${categorySections}">
+    <section class="section" th:style="${iter.odd} ? 'background:var(--surface);border-block:1px solid var(--line)' : ''">
+        <div class="wrap">
+            <div class="section-head">
+                <div>
+                    <h2>
+                        <span class="mark" th:if="${section.category.veg != false}"></span>
+                        <span class="mark nonveg" th:if="${section.category.veg == false}"></span>
+                        <span th:text="${section.category.badge}">🏷️</span>
+                        <span th:text="${section.category.name}">Category</span>
+                    </h2>
+                    <p><span th:text="${section.count}">0</span> item(s) available</p>
+                </div>
+                <a class="btn ghost" th:href="@{/products(categoryId=${section.category.id})}">
+                    See all <span th:text="${section.category.name}">category</span> →
+                </a>
+            </div>
+            <div class="grid">
+                <th:block th:each="p : ${section.products}">
+                    <div th:replace="~{fragments/layout :: productCard(${p})}"></div>
+                </th:block>
+            </div>
+        </div>
+    </section>
+</th:block>
+
+<section class="section">
+    <div class="wrap stats">
+        <div class="stat"><div class="n">₹999+</div><div class="l">Free shipping</div></div>
+        <div class="stat"><div class="n">0%</div><div class="l">UPI charge</div></div>
+        <div class="stat"><div class="n">Daily</div><div class="l">Fresh bakes</div></div>
+        <div class="stat red"><div class="n">0</div><div class="l">Preservatives</div></div>
+    </div>
+</section>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

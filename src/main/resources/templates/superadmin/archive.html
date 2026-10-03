@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/panel :: head('Archive and delete')}"></head>
+<body>
+<div class="shell">
+    <aside th:replace="~{fragments/panel :: sidebar('archive')}"></aside>
+
+    <main class="work">
+        <div class="topbar">
+            <div>
+                <h1>Archive &amp; delete</h1>
+                <div class="crumb">Restore anything here, or remove it for good</div>
+            </div>
+            <a class="btn ghost" th:href="@{/admin}">← Dashboard</a>
+        </div>
+
+        <div class="work-body">
+            <div th:replace="~{fragments/panel :: flash}"></div>
+
+            <div class="notice info">
+                <span class="ico">&#9888;</span>
+                <span>Deleting is permanent and cannot be undone. A food that appears in any past order,
+                    a coupon that has ever been redeemed, or a category that still has foods in it, cannot
+                    be deleted at all — keep it archived so order history stays truthful.</span>
+            </div>
+
+            <!-- ============================================== archived foods -->
+            <div class="panel">
+                <div class="panel-head">
+                    <h3>Archived foods</h3>
+                    <span class="muted small" th:text="|${archivedProducts.size()} item(s)|">0</span>
+                </div>
+
+                <div class="empty" th:if="${archivedProducts.isEmpty()}" style="border:none;padding:28px 0">
+                    <div class="ico">🫙</div>
+                    <p class="mb-0">Nothing archived. Archive a food from its edit page or the
+                        <a th:href="@{/admin/products}">foods list</a>.</p>
+                </div>
+
+                <div class="table-scroll" th:unless="${archivedProducts.isEmpty()}">
+                    <table class="data">
+                        <thead>
+                        <tr><th>Food</th><th>Type</th><th class="num">Price</th>
+                            <th>Archived</th><th></th></tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="p : ${archivedProducts}">
+                            <td>
+                                <div class="cell-title">
+                                    <img class="cell-thumb" th:if="${p.hasPhoto}"
+                                         th:src="${p.displayImageUrl}" th:alt="${p.name}">
+                                    <span class="cell-thumb" th:unless="${p.hasPhoto}"
+                                          th:classappend="${p.veg} ? '' : 'nonveg'"
+                                          th:text="${p.veg} ? '🥭' : '🍗'">🥭</span>
+                                    <span>
+                                        <strong th:text="${p.name}">Food</strong>
+                                        <div class="sub" th:text="${p.sku}">SKU</div>
+                                    </span>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="chip" th:classappend="${p.veg} ? 'veg' : 'nonveg'">
+                                    <span class="mark" th:classappend="${p.veg} ? '' : 'nonveg'"></span>
+                                    <span th:text="${p.pickleType.label}">Veg</span>
+                                </span>
+                            </td>
+                            <td class="num nowrap"
+                                th:text="${T(com.harish.pickles.dto.Money).format(p.pricePaise)}">₹0</td>
+                            <td class="muted small nowrap"
+                                th:text="${p.archivedAt != null}
+                                     ? ${#temporals.format(p.archivedAt, 'dd MMM yyyy, HH:mm')} : '—'"></td>
+                            <td>
+                                <div class="btn-row">
+                                    <form th:action="@{'/superadmin/products/' + ${p.id} + '/restore'}" method="post">
+                                        <button class="btn subtle sm" type="submit">Restore</button>
+                                    </form>
+                                    <form th:action="@{'/superadmin/products/' + ${p.id} + '/delete'}" method="post"
+                                          onsubmit="return confirm('Delete this food and its photos for good? This cannot be undone.');">
+                                        <button class="btn danger sm" type="submit">Delete forever</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- =============================================== archived orders -->
+            <div class="panel">
+                <div class="panel-head">
+                    <h3>Archived orders</h3>
+                    <span class="muted small" th:text="|${archivedOrders.size()} order(s)|">0</span>
+                </div>
+
+                <div class="empty" th:if="${archivedOrders.isEmpty()}" style="border:none;padding:28px 0">
+                    <div class="ico">📦</div>
+                    <p class="mb-0">Nothing archived. Archive an order from the
+                        <a th:href="@{/admin/orders}">orders list</a>.</p>
+                </div>
+
+                <div class="table-scroll" th:unless="${archivedOrders.isEmpty()}">
+                    <table class="data">
+                        <thead>
+                        <tr><th>Order</th><th>Customer</th><th class="num">Total</th>
+                            <th>Status</th><th>Archived</th><th></th></tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="o : ${archivedOrders}">
+                            <td>
+                                <strong th:text="${o.orderNumber}">HP-…</strong>
+                                <div class="sub" th:text="${#temporals.format(o.placedAt, 'dd MMM yyyy')}"></div>
+                            </td>
+                            <td th:text="${o.customerName}">Name</td>
+                            <td class="num nowrap"
+                                th:text="${T(com.harish.pickles.dto.Money).format(o.totalPaise)}">₹0</td>
+                            <td><span class="status" th:classappend="${o.status.name()}"
+                                      th:text="${o.status}">CANCELLED</span></td>
+                            <td class="muted small nowrap"
+                                th:text="${o.archivedAt != null}
+                                     ? ${#temporals.format(o.archivedAt, 'dd MMM yyyy, HH:mm')} : '—'"></td>
+                            <td>
+                                <div class="btn-row">
+                                    <form th:action="@{'/superadmin/orders/' + ${o.orderNumber} + '/restore'}"
+                                          method="post">
+                                        <button class="btn subtle sm" type="submit">Restore</button>
+                                    </form>
+                                    <form th:action="@{'/superadmin/orders/' + ${o.orderNumber} + '/delete'}"
+                                          method="post"
+                                          onsubmit="return confirm('Delete this order, its lines and its payment records for good? This cannot be undone.');">
+                                        <button class="btn danger sm" type="submit">Delete forever</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ============================================== archived coupons -->
+            <div class="panel">
+                <div class="panel-head">
+                    <h3>Archived coupons</h3>
+                    <span class="muted small" th:text="|${archivedCoupons.size()} coupon(s)|">0</span>
+                </div>
+
+                <div class="empty" th:if="${archivedCoupons.isEmpty()}" style="border:none;padding:28px 0">
+                    <div class="ico">🏷️</div>
+                    <p class="mb-0">Nothing archived. Archive a coupon from the
+                        <a th:href="@{/admin/coupons}">coupons list</a>.</p>
+                </div>
+
+                <div class="table-scroll" th:unless="${archivedCoupons.isEmpty()}">
+                    <table class="data">
+                        <thead>
+                        <tr><th>Code</th><th>Discount</th><th class="num">Used</th>
+                            <th>Archived</th><th></th></tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="c : ${archivedCoupons}">
+                            <td>
+                                <strong th:text="${c.code}">SAVE10</strong>
+                                <div class="sub" th:if="${c.description != null}" th:text="${c.description}"></div>
+                            </td>
+                            <td th:text="${c.describeDiscount()}">10% off</td>
+                            <td class="num" th:text="${c.usedCount}">0</td>
+                            <td class="muted small nowrap"
+                                th:text="${c.archivedAt != null}
+                                     ? ${#temporals.format(c.archivedAt, 'dd MMM yyyy, HH:mm')} : '—'"></td>
+                            <td>
+                                <div class="btn-row">
+                                    <form th:action="@{'/superadmin/coupons/' + ${c.id} + '/restore'}" method="post">
+                                        <button class="btn subtle sm" type="submit">Restore</button>
+                                    </form>
+                                    <form th:action="@{'/superadmin/coupons/' + ${c.id} + '/delete'}" method="post"
+                                          onsubmit="return confirm('Delete this coupon for good? This cannot be undone.');">
+                                        <button class="btn danger sm" type="submit">Delete forever</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ============================================ archived categories -->
+            <div class="panel">
+                <div class="panel-head">
+                    <h3>Archived categories</h3>
+                    <span class="muted small" th:text="|${archivedCategories.size()} categories|">0</span>
+                </div>
+
+                <div class="empty" th:if="${archivedCategories.isEmpty()}" style="border:none;padding:28px 0">
+                    <div class="ico">📁</div>
+                    <p class="mb-0">Nothing archived. Archive a category from the
+                        <a th:href="@{/admin/categories}">categories list</a>.</p>
+                </div>
+
+                <div class="table-scroll" th:unless="${archivedCategories.isEmpty()}">
+                    <table class="data">
+                        <thead>
+                        <tr><th>Category</th><th>Archived</th><th></th></tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="c : ${archivedCategories}">
+                            <td>
+                                <div class="cell-title">
+                                    <span class="cell-thumb" th:text="${c.badge}">🏷️</span>
+                                    <strong th:text="${c.name}">Category</strong>
+                                </div>
+                            </td>
+                            <td class="muted small nowrap"
+                                th:text="${c.archivedAt != null}
+                                     ? ${#temporals.format(c.archivedAt, 'dd MMM yyyy, HH:mm')} : '—'"></td>
+                            <td>
+                                <div class="btn-row">
+                                    <form th:action="@{'/superadmin/categories/' + ${c.id} + '/restore'}" method="post">
+                                        <button class="btn subtle sm" type="submit">Restore</button>
+                                    </form>
+                                    <form th:action="@{'/superadmin/categories/' + ${c.id} + '/delete'}" method="post"
+                                          onsubmit="return confirm('Delete this category for good? This cannot be undone.');">
+                                        <button class="btn danger sm" type="submit">Delete forever</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+</body>
+</html>

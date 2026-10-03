@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('My deliveries')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: header('delivery')}"></header>
+<div th:replace="~{fragments/layout :: flash}"></div>
+
+<div class="wrap section">
+    <div class="section-head">
+        <div>
+            <h2>My deliveries</h2>
+            <p th:text="${#lists.isEmpty(active)} ? 'Nothing to deliver right now.'
+                        : |${#lists.size(active)} order(s) to deliver|">Orders to deliver</p>
+        </div>
+    </div>
+
+    <div class="empty" th:if="${#lists.isEmpty(active)}">
+        <div class="ico">&#128666;</div>
+        <h3>You're all caught up</h3>
+        <p>New orders show up here as soon as the store hands them to you.</p>
+    </div>
+
+    <!-- ================================================== orders on the road -->
+    <div class="panel" th:each="o : ${active}">
+        <div class="panel-head">
+            <h3 th:text="${o.orderNumber}">HP-…</h3>
+            <span class="status" th:classappend="${o.status.name()}" th:text="${o.status}">PAID</span>
+        </div>
+
+        <div class="row-2">
+            <div>
+                <strong>Customer</strong><br>
+                <span th:text="${o.shippingAddress.contactName}">Name</span><br>
+                <a th:href="'tel:' + ${o.shippingAddress.contactPhone}"
+                   th:text="${o.shippingAddress.contactPhone}">9876543210</a>
+            </div>
+            <div>
+                <strong>Deliver to</strong><br>
+                <span th:text="${o.shippingAddress.singleLine}">Address</span>
+                <a th:if="${o.shippingAddress.hasPin()}"
+                   th:href="|https://www.google.com/maps/dir/?api=1&destination=${o.shippingAddress.latitude},${o.shippingAddress.longitude}|"
+                   target="_blank" rel="noopener" class="small" style="display:inline-block;margin-left:6px">Navigate →</a>
+            </div>
+        </div>
+
+        <p class="small mt-4 mb-0">
+            <strong>Carrying:</strong>
+            <span th:each="i, st : ${o.items}"
+                  th:text="|${i.productName} × ${i.quantity}${st.last ? '' : ', '}|">Food × 1</span>
+        </p>
+        <p class="small muted mt-4 mb-0" th:if="${o.notes != null and !o.notes.isEmpty()}"
+           th:text="|Customer note: ${o.notes}|">Note</p>
+        <p class="small muted mb-0" th:if="${o.assignedAt != null}"
+           th:text="|Assigned ${#temporals.format(o.assignedAt, 'dd MMM, HH:mm')}|">Assigned</p>
+
+        <div class="form-actions">
+            <form th:if="${o.status.name() == 'PAID' or o.status.name() == 'PACKED'}"
+                  th:action="@{'/delivery/orders/' + ${o.orderNumber} + '/status'}" method="post">
+                <input type="hidden" name="status" value="SHIPPED">
+                <button class="btn" type="submit">Picked up — out for delivery</button>
+            </form>
+            <form th:if="${o.status.name() == 'SHIPPED'}"
+                  th:action="@{'/delivery/orders/' + ${o.orderNumber} + '/status'}" method="post"
+                  onsubmit="return confirm('Confirm this order was handed to the customer?');">
+                <input type="hidden" name="status" value="DELIVERED">
+                <button class="btn lg" type="submit">Mark delivered</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ========================================================== history -->
+    <div class="mt-4" th:unless="${#lists.isEmpty(finished)}">
+        <h3>Recently finished</h3>
+        <div class="table-wrap">
+            <div class="table-scroll">
+                <table class="data">
+                    <thead><tr><th>Order</th><th>Customer</th><th>Address</th><th>Status</th></tr></thead>
+                    <tbody>
+                    <tr th:each="o : ${finished}">
+                        <td><strong th:text="${o.orderNumber}">HP-…</strong></td>
+                        <td th:text="${o.shippingAddress.contactName}">Name</td>
+                        <td class="sub" th:text="${o.shippingAddress.singleLine}">Address</td>
+                        <td><span class="status" th:classappend="${o.status.name()}" th:text="${o.status}">DELIVERED</span></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

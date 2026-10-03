@@ -1,0 +1,46 @@
+# Real outgoing email (password-reset links, admin inbox). Switched on by adding the "mail"
+# profile, and automatically under "prod" (see spring.profiles.group in application.yml):
+#     mvn spring-boot:run -Dspring-boot.run.profiles=dev,mail
+#
+# The mailbox password is never written in this file. Put it in the git-ignored .env file
+# (SPRING_MAIL_PASSWORD=...) or in a real environment variable of the same name.
+# Startup fails with a clear "Could not resolve placeholder" if it is missing.
+#
+# Sri Vinayaka Bakery Home's mailbox (hello@srivinayakabakeryhome.com) is reached over the
+# *implicit TLS* ports (SMTPS 465 / IMAPS 993), not STARTTLS - the connection is encrypted
+# from the first byte, so mail.smtp.ssl.enable / mail.imap.ssl.enable replace starttls here.
+spring:
+  mail:
+    host: ${SPRING_MAIL_HOST:mail.srivinayakabakeryhome.com}
+    port: ${SPRING_MAIL_PORT:465}
+    username: ${SPRING_MAIL_USERNAME:hello@srivinayakabakeryhome.com}
+    password: ${SPRING_MAIL_PASSWORD:%C@L$;Zq9m%Nv5HZ}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.ssl.enable: true
+      mail.smtp.ssl.trust: ${SPRING_MAIL_HOST:mail.srivinayakabakeryhome.com}
+      mail.smtp.starttls.enable: false
+      mail.smtp.connectiontimeout: 10000
+      mail.smtp.timeout: 15000
+      mail.smtp.writetimeout: 15000
+    # Read access to the same mailbox, for the admin inbox screen. Same host/credentials as
+    # above, different port/protocol (IMAPS 993, implicit TLS).
+    imap:
+      host: ${SPRING_MAIL_IMAP_HOST:mail.srivinayakabakeryhome.com}
+      port: ${SPRING_MAIL_IMAP_PORT:993}
+      ssl: ${SPRING_MAIL_IMAP_SSL:true}
+      username: ${SPRING_MAIL_USERNAME:hello@srivinayakabakeryhome.com}
+      password: ${SPRING_MAIL_PASSWORD:}
+
+app:
+  mail:
+    # Most SMTP servers only accept a From address that matches the logged-in mailbox.
+    from: ${MAIL_FROM:Sri Vinayaka Bakery Home <hello@srivinayakabakeryhome.com>}
+    imap:
+      enabled: ${MAIL_IMAP_ENABLED:true}
+      # The sent-mail folder's name is server-specific ("Sent", "Sent Items", "INBOX.Sent" are
+      # all common). If the Sent tab comes back empty, log store.getDefaultFolder().list("*")
+      # once to see this server's real folder names, or ask the mail host.
+      sent-folder: ${MAIL_IMAP_SENT_FOLDER:INBOX.Sent}
+      connect-timeout-ms: 10000
+      fetch-size: 50

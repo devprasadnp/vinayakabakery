@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(${product.name})}"></head>
+<body>
+<header th:replace="~{fragments/layout :: header(${navActive})}"></header>
+<div th:replace="~{fragments/layout :: flash}"></div>
+
+<div class="wrap section">
+    <p class="muted small">
+        <a th:href="@{/products}">Foods</a> /
+        <a th:href="@{/products(type=${product.pickleType.name()})}" th:text="${product.pickleType.label}">Veg</a> /
+        <span th:text="${product.category}">Mango</span>
+    </p>
+
+    <div class="split">
+        <div>
+            <div class="card" style="max-width:480px">
+                <div class="thumb" th:classappend="${product.veg} ? '' : 'nonveg'" style="aspect-ratio:1">
+                    <img th:if="${product.hasPhoto}" th:src="${product.displayImageUrl}" th:alt="${product.name}">
+                    <span class="glyph" th:unless="${product.hasPhoto}" style="font-size:5rem"
+                          th:text="${product.veg} ? '🥭' : '🍗'">🥭</span>
+                </div>
+            </div>
+
+            <div class="photo-grid mt-4" th:if="${product.images.size() > 1}" style="max-width:480px">
+                <th:block th:each="img : ${product.images}">
+                    <div class="photo" th:classappend="${img.primary} ? 'is-primary' : ''">
+                        <img th:src="${img.url}" th:alt="${product.name}">
+                    </div>
+                </th:block>
+            </div>
+
+            <div class="panel mt-5" th:if="${product.ingredients != null}">
+                <h3>Ingredients</h3>
+                <p class="muted mb-0" th:text="${product.ingredients}"></p>
+            </div>
+        </div>
+
+        <div class="sticky-side">
+            <div class="panel">
+                <div class="stack tight">
+                    <span class="chip" th:classappend="${product.veg} ? 'veg' : 'nonveg'">
+                        <span class="mark" th:classappend="${product.veg} ? '' : 'nonveg'"></span>
+                        <span th:text="${product.pickleType.label}">Veg</span>
+                    </span>
+                    <span class="chip spice" th:text="${product.spiceLevel.label}">Hot</span>
+                    <span class="chip solid-red" th:if="${product.discountPercent > 0}"
+                          th:text="|${product.discountPercent}% off|">10% off</span>
+                </div>
+
+                <h1 class="mt-4" style="font-size:var(--fs-2xl)" th:text="${product.name}">Food</h1>
+                <p class="muted" th:text="${product.description}"></p>
+
+                <p style="font-size:var(--fs-2xl);font-weight:800;margin:16px 0 2px">
+                    <span th:text="${T(com.harish.pickles.dto.Money).format(product.pricePaise)}">₹0</span>
+                    <span class="mrp" th:if="${product.mrpPaise != null and product.discountPercent > 0}"
+                          th:text="${T(com.harish.pickles.dto.Money).format(product.mrpPaise)}">₹0</span>
+                </p>
+                <p class="muted small"
+                   th:text="|${product.weightGrams} g jar · keeps ${product.shelfLifeDays} days · SKU ${product.sku}|"></p>
+
+                <form th:action="@{/cart/add}" method="post" th:if="${product.inStock}" class="mt-4">
+                    <input type="hidden" name="productId" th:value="${product.id}">
+                    <div class="field">
+                        <label for="quantity">How many jars?</label>
+                        <div class="qty">
+                            <input id="quantity" type="number" name="quantity" value="1" min="1"
+                                   th:max="${product.stockQty}">
+                            <span class="muted small" th:text="|${product.stockQty} in stock|"></span>
+                        </div>
+                    </div>
+                    <button class="btn lg block" type="submit">Add to cart</button>
+                </form>
+
+                <div class="notice bad mt-4 mb-0" th:unless="${product.inStock}">
+                    <span class="ico">&#9888;</span>
+                    <span>Out of stock. We restock every Monday.</span>
+                </div>
+
+                <p class="muted small mt-4 mb-0">
+                    Free shipping over ₹999 · Pay by UPI, card or net banking
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-head"><h2>You may also like</h2></div>
+        <div class="grid">
+            <th:block th:each="p : ${related}" th:if="${p.id != product.id}">
+                <div th:replace="~{fragments/layout :: productCard(${p})}"></div>
+            </th:block>
+        </div>
+    </div>
+</div>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

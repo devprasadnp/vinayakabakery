@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:fragment="head(title)">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#5C1D06">
+    <title th:text="|${title} · Sri Vinayaka Bakery Home|">Admin</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+
+<!-- ============================================================ admin sidebar -->
+<aside class="side" th:fragment="sidebar(active)">
+    <a class="brand" th:href="@{/admin}">
+        <span class="logo-mark"></span>
+        <span>
+            Sri Vinayaka Bakery Home
+            <small sec:authorize="hasRole('SUPER_ADMIN')">Super Admin</small>
+            <small sec:authorize="!hasRole('SUPER_ADMIN')">Admin</small>
+        </span>
+    </a>
+
+    <div class="group">Shop</div>
+    <nav>
+        <a th:href="@{/admin}" th:classappend="${active == 'dashboard'} ? 'active' : ''">
+            <span>&#9632;</span> Dashboard</a>
+        <a th:href="@{/admin/products}" th:classappend="${active == 'products'} ? 'active' : ''">
+            <span>&#9724;</span> Foods</a>
+        <a th:href="@{/admin/categories}" th:classappend="${active == 'categories'} ? 'active' : ''">
+            <span>&#128193;</span> Categories</a>
+        <a th:href="@{/admin/orders}" th:classappend="${active == 'orders'} ? 'active' : ''">
+            <span>&#9642;</span> Orders</a>
+        <a th:href="@{/admin/coupons}" th:classappend="${active == 'coupons'} ? 'active' : ''">
+            <span>&#127991;</span> Coupons</a>
+    </nav>
+
+    <div class="group">Delivery</div>
+    <nav>
+        <a th:href="@{/admin/delivery-areas}" th:classappend="${active == 'areas'} ? 'active' : ''">
+            <span>&#128205;</span> Delivery areas</a>
+        <a th:href="@{/admin/delivery-partners}" th:classappend="${active == 'partners'} ? 'active' : ''">
+            <span>&#128666;</span> Delivery partners</a>
+    </nav>
+
+    <div class="group">People</div>
+    <nav>
+        <a th:href="@{/admin/customers}" th:classappend="${active == 'customers'} ? 'active' : ''">
+            <span>&#9679;</span> Customers</a>
+    </nav>
+
+    <div class="group">Mail</div>
+    <nav>
+        <a th:href="@{/admin/mail}" th:classappend="${active == 'mail'} ? 'active' : ''">
+            <span>&#9993;</span> Inbox</a>
+        <a th:href="@{/admin/mail/compose}" th:classappend="${active == 'mail-compose'} ? 'active' : ''">
+            <span>&#9998;</span> Compose</a>
+    </nav>
+
+    <div sec:authorize="hasRole('SUPER_ADMIN')">
+        <div class="group">Super admin</div>
+        <nav>
+            <a th:href="@{/admin/staff}" th:classappend="${active == 'staff'} ? 'active' : ''">
+                <span>&#9670;</span> Admin accounts</a>
+            <a class="danger-zone" th:href="@{/superadmin/archive}"
+               th:classappend="${active == 'archive'} ? 'active' : ''">
+                <span>&#9851;</span> Archive &amp; delete</a>
+        </nav>
+    </div>
+
+    <div class="group">Store</div>
+    <nav>
+        <a th:href="@{/admin/store-location}" th:classappend="${active == 'store-location'} ? 'active' : ''">
+            <span>&#128506;</span> Store location</a>
+        <a th:href="@{/}"><span>&#8599;</span> View storefront</a>
+        <a th:href="@{/swagger-ui.html}"><span>&#8599;</span> API docs</a>
+    </nav>
+
+    <div class="side-foot">
+        Signed in as<br>
+        <strong th:text="${currentUser != null} ? ${currentUser.fullName} : ''">Name</strong><br>
+        <span th:text="${currentUser != null} ? ${currentUser.role.label} : ''">Admin</span>
+        <form th:action="@{/logout}" method="post" style="margin-top:10px">
+            <button class="btn ghost sm" type="submit">Sign out</button>
+        </form>
+    </div>
+</aside>
+
+<!-- ========================================================== flash messages -->
+<div th:fragment="flash" th:if="${message != null or error != null or generatedPassword != null}">
+    <div class="notice ok" th:if="${message}">
+        <span class="ico">&#10003;</span><span th:text="${message}"></span>
+    </div>
+    <div class="notice bad" th:if="${error}">
+        <span class="ico">&#9888;</span><span th:text="${error}"></span>
+    </div>
+    <div class="notice info" th:if="${generatedPassword}">
+        <span class="ico">&#128273;</span>
+        <span>New password: <code th:text="${generatedPassword}"></code>
+            &mdash; copy it now, it is not shown again.</span>
+    </div>
+</div>
+
+</body>
+</html>

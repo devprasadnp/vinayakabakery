@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Scan to pay')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: header('orders')}"></header>
+<div th:replace="~{fragments/layout :: flash}"></div>
+
+<div class="wrap section" style="max-width:640px">
+    <div class="panel" style="text-align:center" id="payQrPanel"
+         th:attr="data-order-number=${order.orderNumber},data-order-status=${order.status.name()},data-status-url=@{'/orders/' + ${order.orderNumber} + '/pay-qr-status'},data-order-url=@{'/orders/' + ${order.orderNumber}}">
+        <span class="ico" style="font-size:2.2rem; line-height:1">&#9989;</span>
+        <h2 class="mb-0">Order placed!</h2>
+        <p class="muted">
+            Order <strong th:text="${order.orderNumber}">HP-…</strong> is placed and will be confirmed
+            once your payment <span th:if="${gatewayQr}">is received</span><span th:unless="${gatewayQr}">is scanned</span>. Please scan the QR below to pay
+            <strong th:text="${T(com.harish.pickles.dto.Money).format(order.totalPaise)}">₹0</strong>.
+        </p>
+        <p class="muted small" id="paymentWatchNotice" th:if="${order.status.name() == 'PENDING_PAYMENT'}">
+            <span aria-hidden="true">&#8226;</span> Watching for your payment confirmation — this page will
+            move on automatically once it's confirmed.
+        </p>
+
+        <img th:src="@{'/orders/' + ${order.orderNumber} + '/qr-code.png'}" alt="Scan this QR code to pay"
+             style="max-width:280px; width:100%; margin:16px auto; display:block; border-radius:12px">
+
+        <div th:unless="${gatewayQr}">
+            <p class="mb-0">
+                <span class="muted small">UPI ID</span><br>
+                <strong th:text="${paymentProperties.upiId}">upi@bank</strong>
+            </p>
+            <p class="muted small mt-0" th:text="${paymentProperties.payeeName}">Payee name</p>
+
+            <p class="mt-4 mb-0">
+                <a class="btn" th:href="${upiUri}" style="display:inline-block">
+                    Pay with UPI app
+                </a>
+            </p>
+            <p class="muted small mt-0">
+                On a phone, this opens Google Pay, PhonePe, Paytm, BHIM or any UPI app you have installed,
+                with the amount and order number already filled in — no need to scan.
+            </p>
+        </div>
+
+        <div class="notice bad" style="text-align:left">
+            <span class="ico">&#9888;</span>
+            <span>This QR code already carries <strong th:text="${order.orderNumber}">HP-…</strong> as the
+                payment note, so it's prefilled once you scan. Please don't edit or remove it, so we can
+                match your payment to this order.</span>
+        </div>
+
+        <div class="notice info" style="text-align:left" th:if="${gatewayQr}">
+            <span class="ico">&#9989;</span>
+            <span>This payment is confirmed automatically — usually within a few seconds of scanning.
+                No need to pay again or wait for an admin; this page moves on by itself.</span>
+        </div>
+        <div class="notice info" style="text-align:left" th:unless="${gatewayQr}">
+            <span class="ico">&#8987;</span>
+            <span>After a successful payment, it usually takes up to
+                <strong th:text="${paymentProperties.confirmationHours}">24</strong> hours for the status
+                to reflect on your <a th:href="@{/orders}">Orders</a> page. No need to pay again — please
+                be patient while we confirm it.</span>
+        </div>
+
+        <div class="notice ok" style="text-align:left">
+            <span class="ico">&#9742;</span>
+            <span>If you face any issue after the payment is successful, please reach out to our
+                customer care at
+                <strong th:text="${paymentProperties.customerCareMobile}">9999999999</strong> or
+                <strong th:text="${paymentProperties.customerCareEmail}">care@example.com</strong>,
+                along with a screenshot of this payment confirmation page.</span>
+        </div>
+
+        <p class="mt-4">Thank you for your patience.</p>
+
+        <div class="form-actions" style="justify-content:center; gap:12px">
+            <a class="btn" th:href="@{'/orders/' + ${order.orderNumber}}">View order</a>
+            <a class="btn ghost" th:href="@{/products}">Continue shopping</a>
+        </div>
+    </div>
+</div>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+<script>
+(function () {
+    var panel = document.getElementById('payQrPanel');
+    if (!panel || panel.dataset.orderStatus !== 'PENDING_PAYMENT') {
+        return;
+    }
+    var statusUrl = panel.dataset.statusUrl;
+    var orderUrl = panel.dataset.orderUrl;
+    var notice = document.getElementById('paymentWatchNotice');
+    var pollMs = 5000;
+    var maxMs = 5 * 60 * 1000;
+    var startedAt = Date.now();
+
+    function stopWatching() {
+        if (notice) {
+            notice.textContent = "We're still checking your payment — refresh this page in a bit, "
+                + 'or check My orders once it clears.';
+        }
+    }
+
+    function poll() {
+        if (Date.now() - startedAt > maxMs) {
+            stopWatching();
+            return;
+        }
+        fetch(statusUrl, { headers: { 'Accept': 'application/json' } })
+            .then(function (res) { return res.ok ? res.json() : null; })
+            .then(function (data) {
+                if (data && data.status !== 'PENDING_PAYMENT') {
+                    window.location.href = orderUrl;
+                    return;
+                }
+                setTimeout(poll, pollMs);
+            })
+            .catch(function () { setTimeout(poll, pollMs); });
+    }
+
+    setTimeout(poll, pollMs);
+})();
+</script>
+</body>
+</html>

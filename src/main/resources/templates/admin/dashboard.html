@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/panel :: head('Dashboard')}"></head>
+<body>
+<div class="shell">
+    <aside th:replace="~{fragments/panel :: sidebar('dashboard')}"></aside>
+
+    <main class="work">
+        <div class="topbar">
+            <div>
+                <h1>Dashboard</h1>
+                <div class="crumb">How the shop is doing right now</div>
+            </div>
+            <div class="btn-row">
+                <a class="btn ghost" th:href="@{/admin/orders}">Orders</a>
+                <a class="btn" th:href="@{/admin/products/new}">+ Add a food</a>
+            </div>
+        </div>
+
+        <div class="work-body">
+            <div th:replace="~{fragments/panel :: flash}"></div>
+
+            <div class="stats">
+                <div class="stat">
+                    <div class="l">Revenue</div>
+                    <div class="n" th:text="'₹' + ${revenue}">₹0</div>
+                    <div class="note">Paid and beyond</div>
+                </div>
+                <div class="stat blue">
+                    <div class="l">Orders</div>
+                    <div class="n" th:text="${orderCount}">0</div>
+                    <div class="note"><span th:text="${paidOrders}">0</span> paid</div>
+                </div>
+                <div class="stat amber">
+                    <div class="l">Awaiting payment</div>
+                    <div class="n" th:text="${pendingOrders}">0</div>
+                    <div class="note">Not yet confirmed</div>
+                </div>
+                <div class="stat">
+                    <div class="l">Foods listed</div>
+                    <div class="n" th:text="${productCount}">0</div>
+                    <div class="note">
+                        <span th:text="${vegCount}">0</span> veg ·
+                        <span th:text="${nonVegCount}">0</span> non-veg
+                    </div>
+                </div>
+                <div class="stat red">
+                    <div class="l">Low stock</div>
+                    <div class="n" th:text="${lowStock}">0</div>
+                    <div class="note">Under 5 jars left</div>
+                </div>
+            </div>
+
+            <div class="panel mt-5">
+                <div class="panel-head">
+                    <h3>Latest orders</h3>
+                    <a class="btn ghost sm" th:href="@{/admin/orders}">See all orders →</a>
+                </div>
+
+                <div class="empty" th:if="${recentOrders.isEmpty()}" style="border:none;padding:32px 0">
+                    <div class="ico">📦</div>
+                    <h3>No orders yet</h3>
+                    <p>They will appear here the moment someone checks out.</p>
+                </div>
+
+                <div class="table-scroll" th:unless="${recentOrders.isEmpty()}">
+                    <table class="data">
+                        <thead>
+                        <tr><th>Order</th><th>Customer</th><th class="num">Total</th>
+                            <th>Status</th><th>Placed</th><th></th></tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="o : ${recentOrders}">
+                            <td><strong th:text="${o.orderNumber}">HP-…</strong></td>
+                            <td>
+                                <span th:text="${o.customerName}">Name</span>
+                                <div class="sub" th:if="${o.shippingAddress != null}"
+                                     th:text="${o.shippingAddress.city}"></div>
+                            </td>
+                            <td class="num nowrap"
+                                th:text="${T(com.harish.pickles.dto.Money).format(o.totalPaise)}">₹0</td>
+                            <td><span class="status" th:classappend="${o.status.name()}"
+                                      th:text="${o.status}">PAID</span></td>
+                            <td class="nowrap muted small"
+                                th:text="${#temporals.format(o.placedAt, 'dd MMM, HH:mm')}"></td>
+                            <td><a class="btn ghost sm" th:href="@{/admin/orders}">Manage</a></td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-head"><h3>Delivery &amp; people</h3></div>
+                <div class="btn-row">
+                    <a class="btn ghost" th:href="@{/admin/delivery-areas}">Delivery areas</a>
+                    <a class="btn ghost" th:href="@{/admin/delivery-partners}">Delivery partners</a>
+                    <a class="btn ghost" th:href="@{/admin/customers}">Customers &amp; password resets</a>
+                </div>
+            </div>
+
+            <div class="panel" sec:authorize="hasRole('SUPER_ADMIN')">
+                <div class="panel-head"><h3>Super admin shortcuts</h3></div>
+                <div class="btn-row">
+                    <a class="btn ghost" th:href="@{/admin/customers/new}">+ Add a customer</a>
+                    <a class="btn ghost" th:href="@{/admin/staff}">Admin accounts</a>
+                    <a class="btn danger-ghost" th:href="@{/superadmin/archive}">Archive &amp; delete</a>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+</body>
+</html>

@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/panel :: head(${product == null} ? 'Add a food' : 'Edit food')}"></head>
+<body>
+<div class="shell">
+    <aside th:replace="~{fragments/panel :: sidebar('products')}"></aside>
+
+    <main class="work">
+        <div class="topbar">
+            <div>
+                <h1 th:text="${product == null} ? 'Add a food' : ${product.name}">Add a food</h1>
+                <div class="crumb" th:text="${product == null}
+                     ? 'Fill in the details, add photos, then save'
+                     : 'Edit the details or manage its photos'">Details</div>
+            </div>
+            <a class="btn ghost" th:href="@{/admin/products}">← All foods</a>
+        </div>
+
+        <div class="work-body">
+            <div th:replace="~{fragments/panel :: flash}"></div>
+
+            <div class="split">
+                <form class="panel" th:action="@{/admin/products}" method="post" enctype="multipart/form-data">
+                    <input type="hidden" name="id" th:if="${product != null}" th:value="${product.id}">
+
+                    <div class="panel-head"><h3>Details</h3></div>
+
+                    <div class="field">
+                        <label for="name">Name</label>
+                        <input id="name" name="name" required maxlength="160"
+                               placeholder="Avakaya Mango Pickle"
+                               th:value="${product != null} ? ${product.name} : ''">
+                    </div>
+
+                    <div class="row-2">
+                        <div class="field">
+                            <label for="sku">SKU</label>
+                            <input id="sku" name="sku" required maxlength="64" placeholder="HP-VEG-AVK-500"
+                                   th:value="${product != null} ? ${product.sku} : ''">
+                            <div class="hint">Your own stock code. Must be unique.</div>
+                        </div>
+                        <div class="field">
+                            <label for="category">Category</label>
+                            <input id="category" name="category" required maxlength="64"
+                                   placeholder="Mango / Chicken / Seafood"
+                                   th:value="${product != null} ? ${product.category} : ''">
+                        </div>
+                    </div>
+
+                    <div class="row-2">
+                        <div class="field">
+                            <label for="inventoryCategoryId">Inventory type</label>
+                            <select id="inventoryCategoryId" name="inventoryCategoryId" required>
+                                <option th:each="c : ${categories}" th:value="${c.id}" th:text="|${c.badge} ${c.name}|"
+                                        th:selected="${product != null and product.inventoryCategory.id == c.id}"></option>
+                            </select>
+                            <div class="hint">Which accordion section this shows under on the storefront.
+                                <a th:href="@{/admin/categories}">Manage categories</a></div>
+                        </div>
+                        <div class="field">
+                            <label for="pickleType">Veg or non-veg</label>
+                            <select id="pickleType" name="pickleType" required>
+                                <option th:each="t : ${pickleTypes}" th:value="${t.name()}" th:text="${t.label}"
+                                        th:selected="${product != null and product.pickleType == t}"></option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row-2">
+                        <div class="field">
+                            <label for="spiceLevel">Spice level</label>
+                            <select id="spiceLevel" name="spiceLevel" required>
+                                <option th:each="s : ${spiceLevels}" th:value="${s.name()}" th:text="${s.label}"
+                                        th:selected="${product != null and product.spiceLevel == s}"></option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row-3">
+                        <div class="field">
+                            <label for="price">Selling price (₹)</label>
+                            <input id="price" name="price" type="number" step="0.01" min="1" required
+                                   th:value="${product != null}
+                                     ? ${T(com.harish.pickles.dto.Money).toRupees(product.pricePaise)} : ''">
+                        </div>
+                        <div class="field">
+                            <label for="mrp">MRP (₹)</label>
+                            <input id="mrp" name="mrp" type="number" step="0.01" min="0"
+                                   th:value="${product != null and product.mrpPaise != null}
+                                     ? ${T(com.harish.pickles.dto.Money).toRupees(product.mrpPaise)} : ''">
+                            <div class="hint">Shown struck through.</div>
+                        </div>
+                        <div class="field">
+                            <label for="stockQty">Stock (jars)</label>
+                            <input id="stockQty" name="stockQty" type="number" min="0" required
+                                   th:value="${product != null} ? ${product.stockQty} : '0'">
+                        </div>
+                    </div>
+
+                    <div class="row-2">
+                        <div class="field">
+                            <label for="weightGrams">Net weight (g)</label>
+                            <input id="weightGrams" name="weightGrams" type="number" min="1" required
+                                   th:value="${product != null} ? ${product.weightGrams} : '500'">
+                        </div>
+                        <div class="field">
+                            <label for="shelfLifeDays">Shelf life (days)</label>
+                            <input id="shelfLifeDays" name="shelfLifeDays" type="number" min="1"
+                                   th:value="${product != null} ? ${product.shelfLifeDays} : '365'">
+                        </div>
+                    </div>
+
+                    <div class="field">
+                        <label for="description">Description</label>
+                        <textarea id="description" name="description" rows="3"
+                                  placeholder="What makes this jar worth buying?"
+                                  th:text="${product != null} ? ${product.description} : ''"></textarea>
+                    </div>
+
+                    <div class="field">
+                        <label for="ingredients">Ingredients</label>
+                        <textarea id="ingredients" name="ingredients" rows="2"
+                                  placeholder="Raw mango, mustard powder, red chilli powder…"
+                                  th:text="${product != null} ? ${product.ingredients} : ''"></textarea>
+                    </div>
+
+                    <div class="panel-head mt-5"><h3>Photos</h3></div>
+
+                    <div class="dropzone">
+                        <div class="icon">📷</div>
+                        <strong>Upload your own photos</strong>
+                        <small>JPG, PNG, WEBP or GIF · up to 5 MB each · up to 6 per food</small>
+                        <input type="file" name="photos" accept="image/png,image/jpeg,image/webp,image/gif" multiple>
+                    </div>
+                    <div class="hint" style="margin-top:8px">
+                        The first photo you upload becomes the main one. You can change that below after saving.
+                    </div>
+
+                    <div class="field mt-4">
+                        <label for="imageUrl">Or link an image on the web <span class="muted">(optional)</span></label>
+                        <input id="imageUrl" name="imageUrl" maxlength="500" placeholder="https://…"
+                               th:value="${product != null} ? ${product.imageUrl} : ''">
+                        <div class="hint">Only used when no photo has been uploaded.</div>
+                    </div>
+
+                    <div class="field inline-check">
+                        <label>
+                            <input type="checkbox" name="active" value="true"
+                                   th:checked="${product == null or product.active}">
+                            Show this food on the storefront
+                        </label>
+                    </div>
+
+                    <div class="form-actions">
+                        <button class="btn lg" type="submit">Save food</button>
+                        <a class="btn ghost" th:href="@{/admin/products}">Cancel</a>
+                    </div>
+                </form>
+
+                <div class="sticky-side" th:if="${product != null}">
+                    <div class="panel">
+                        <div class="panel-head">
+                            <h3>Photo library</h3>
+                            <span class="muted small" th:text="|${product.images.size()} of 6|">0 of 6</span>
+                        </div>
+
+                        <div class="empty" th:if="${product.images.isEmpty()}" style="border:none;padding:24px 0">
+                            <div class="ico">📷</div>
+                            <p class="mb-0">No photos yet. Use the upload box on the left.</p>
+                        </div>
+
+                        <div class="photo-grid" th:unless="${product.images.isEmpty()}">
+                            <th:block th:each="img : ${product.images}">
+                                <div class="photo" th:classappend="${img.primary} ? 'is-primary' : ''">
+                                    <span class="flag" th:if="${img.primary}">Main</span>
+                                    <img th:src="${img.url}" th:alt="${product.name}">
+                                    <div class="tools">
+                                        <form th:unless="${img.primary}"
+                                              th:action="@{'/admin/products/' + ${product.id} + '/photos/' + ${img.id} + '/primary'}"
+                                              method="post">
+                                            <button class="btn ghost" type="submit">Make main</button>
+                                        </form>
+                                        <form th:action="@{'/admin/products/' + ${product.id} + '/photos/' + ${img.id} + '/delete'}"
+                                              method="post"
+                                              onsubmit="return confirm('Remove this photo? The file is deleted from disk.');">
+                                            <button class="btn danger-ghost" type="submit">Remove</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </th:block>
+                        </div>
+
+                        <form class="mt-4" th:action="@{'/admin/products/' + ${product.id} + '/photos'}"
+                              method="post" enctype="multipart/form-data">
+                            <div class="field mb-0">
+                                <label for="morePhotos">Add more photos</label>
+                                <input id="morePhotos" type="file" name="photos" multiple
+                                       accept="image/png,image/jpeg,image/webp,image/gif">
+                            </div>
+                            <button class="btn subtle block mt-4" type="submit">Upload</button>
+                        </form>
+                    </div>
+
+                    <div class="panel">
+                        <h3 class="mt-0">Live preview</h3>
+                        <div th:replace="~{fragments/layout :: productCard(${product})}"></div>
+                    </div>
+
+                    <div class="panel danger-box" sec:authorize="hasRole('SUPER_ADMIN')">
+                        <h3>Danger zone</h3>
+                        <p class="small">Archiving hides this food everywhere. You can restore it, or delete
+                            it for good from the archive.</p>
+                        <form th:action="@{'/superadmin/products/' + ${product.id} + '/archive'}" method="post"
+                              onsubmit="return confirm('Archive this food? It disappears from the shop but nothing is deleted yet.');">
+                            <button class="btn danger block" type="submit">Archive this food</button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="sticky-side" th:if="${product == null}">
+                    <div class="panel">
+                        <h3 class="mt-0">Photos</h3>
+                        <p class="small muted mb-0">Save the food first. Its photo library — with
+                            “make main” and “remove” — appears here as soon as it exists. Anything you pick
+                            in the upload box on the left is attached at the same time.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+</body>
+</html>

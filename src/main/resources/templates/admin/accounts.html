@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/panel :: head(${heading})}"></head>
+<body>
+<div class="shell">
+    <aside th:replace="~{fragments/panel :: sidebar(${activePage})}"></aside>
+
+    <main class="work">
+        <div class="topbar">
+            <div>
+                <h1 th:text="${heading}">Customers</h1>
+                <div class="crumb" th:text="|${users.totalElements} account(s)|">0</div>
+            </div>
+            <a class="btn" th:href="@{${newPath}}" th:if="${newPath != null}" th:text="|+ ${newLabel}|">+ Add</a>
+        </div>
+
+        <div class="work-body">
+            <div th:replace="~{fragments/panel :: flash}"></div>
+
+            <form class="filters" th:action="@{${basePath}}" method="get">
+                <input type="search" name="q" placeholder="Search by name, email or phone" th:value="${q}">
+                <button class="btn ghost" type="submit">Search</button>
+                <a class="btn ghost" th:if="${q != null and !q.isEmpty()}"
+                   th:href="@{${basePath}}">Clear</a>
+            </form>
+
+            <div class="empty" th:if="${users.isEmpty()}">
+                <div class="ico">👤</div>
+                <h3>No accounts found</h3>
+                <p th:text="${q != null and !q.isEmpty()}
+                   ? 'Nothing matched that search.' : 'Accounts will show up here once they exist.'"></p>
+                <a class="btn" th:href="@{${newPath}}" th:if="${newPath != null}" th:text="${newLabel}">Add</a>
+            </div>
+
+            <div class="table-wrap" th:unless="${users.isEmpty()}">
+                <div class="table-scroll">
+                    <table class="data">
+                        <thead>
+                        <tr><th>Name</th><th>Email</th><th>Phone</th><th>Role</th>
+                            <th>Status</th><th>Joined</th><th></th></tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="u : ${users.content}">
+                            <td>
+                                <div class="cell-title">
+                                    <span class="avatar"
+                                          th:classappend="${u.role.staff} ? 'staff' : ''"
+                                          th:text="${#strings.substring(u.fullName,0,1)}">A</span>
+                                    <strong th:text="${u.fullName}">Name</strong>
+                                </div>
+                            </td>
+                            <td th:text="${u.email}">a@b.in</td>
+                            <td th:text="${u.phone} ?: '—'">—</td>
+                            <td>
+                                <span class="chip" th:classappend="${u.role.name() == 'SUPER_ADMIN'} ? 'solid-brand'
+                                      : (${u.role.name() == 'ADMIN'} ? 'veg'
+                                      : (${u.role.name() == 'DELIVERY_PARTNER'} ? 'spice' : ''))"
+                                      th:text="${u.role.label}">Customer</span>
+                            </td>
+                            <td>
+                                <span class="status" th:classappend="${u.enabled} ? 'PAID' : 'CANCELLED'"
+                                      th:text="${u.enabled} ? 'Active' : 'Blocked'">Active</span>
+                            </td>
+                            <td class="muted small nowrap"
+                                th:text="${#temporals.format(u.createdAt, 'dd MMM yyyy')}"></td>
+                            <td>
+                                <a class="btn ghost sm" th:href="@{'/admin/accounts/' + ${u.id} + '/edit'}">
+                                    Manage</a>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="stack mt-4" th:if="${users.totalPages > 1}">
+                <a class="btn ghost sm" th:if="${!users.first}"
+                   th:href="@{${basePath}(q=${q}, page=${users.number - 1})}">← Previous</a>
+                <span class="muted small" th:text="|Page ${users.number + 1} of ${users.totalPages}|"></span>
+                <a class="btn ghost sm" th:if="${!users.last}"
+                   th:href="@{${basePath}(q=${q}, page=${users.number + 1})}">Next →</a>
+            </div>
+        </div>
+    </main>
+</div>
+</body>
+</html>

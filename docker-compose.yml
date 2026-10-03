@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: sri-vinayaka-bakery-home-db
+    environment:
+      POSTGRES_DB: sri_vinayaka_bakery_home
+      POSTGRES_USER: bakery
+      POSTGRES_PASSWORD: bakery
+    ports:
+      - "5432:5432"
+    volumes:
+      - bakery-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bakery -d sri_vinayaka_bakery_home"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  bakery-pgdata:

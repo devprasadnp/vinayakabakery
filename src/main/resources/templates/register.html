@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Create account')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: header('')}"></header>
+<div th:replace="~{fragments/layout :: flash}"></div>
+
+<div class="section">
+    <div class="wrap-narrow">
+        <h2 class="center">Create your account</h2>
+        <p class="center muted">It takes a minute and keeps your addresses and orders together.</p>
+
+        <form class="panel mt-4" th:action="@{/register}" method="post">
+            <div class="field">
+                <label for="fullName">Full name</label>
+                <input id="fullName" name="fullName" required maxlength="120" autocomplete="name"
+                       th:value="${fullName}">
+            </div>
+            <div class="field">
+                <label for="email">Email</label>
+                <input id="email" name="email" type="email" required autocomplete="email" th:value="${email}">
+            </div>
+            <div class="field">
+                <label for="phone">Mobile number</label>
+                <input id="phone" name="phone" pattern="[6-9][0-9]{9}" inputmode="numeric"
+                       autocomplete="tel" placeholder="10 digits" th:value="${phone}">
+            </div>
+            <div class="field">
+                <label for="password">Password</label>
+                <input id="password" name="password" type="password" required minlength="8"
+                       autocomplete="new-password">
+                <div class="hint">At least 8 characters.</div>
+            </div>
+            <button class="btn lg block" type="submit">Create account</button>
+            <p class="center muted small mt-4 mb-0">
+                Already registered? <a th:href="@{/login}">Sign in</a>
+            </p>
+        </form>
+    </div>
+</div>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

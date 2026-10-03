@@ -1,0 +1,157 @@
+spring:
+  application:
+    name: sri-vinayaka-bakery-home
+  profiles:
+    active: prod
+    group:
+      # "prod" (the default) always sends real email; for local development without that,
+      # run with -Dspring-boot.run.profiles=dev instead.
+      prod: prod,mail
+  config:
+    # Secrets (e.g. SPRING_MAIL_PASSWORD) live in an untracked .env file next to the jar / pom.xml.
+    import: optional:file:./.env[.properties]
+  datasource:
+    # DB_HOSTS may list several hosts, tried in order (`localhost:5432,203.0.113.7:5432`). If the database will not
+    # let the app in, the startup failure message re-tries every route from this server and prints the DB_HOSTS
+    # value that works. IPv6 ([::1]) is deliberately not in the default: some servers have it switched off.
+    # DB_SSLMODE=require if the host insists on SSL. Set DB_URL to replace the whole URL.
+    url: ${DB_URL:jdbc:postgresql://${DB_HOSTS:localhost:5432}/${DB_NAME:cjgwzcmo_home}?sslmode=${DB_SSLMODE:disable}}
+    username: ${DB_USERNAME:cjgwzcmo_homeuser}
+    password: ${DB_PASSWORD:hY8,H3i]k0(g[0km}
+    hikari:
+      pool-name: pickles-pool
+      maximum-pool-size: 10
+  jpa:
+    open-in-view: false
+    hibernate:
+      # Flyway owns the schema. Set this to "validate" once your DB is in place
+      # if you want Hibernate to cross-check the mapping at startup.
+      ddl-auto: none
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: Asia/Kolkata
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+  thymeleaf:
+    cache: false
+  mail:
+    # Deliberately no "host" here: Spring Boot treats a present-but-empty host as "mail is
+    # configured". Email is switched on by the "mail" profile - see application-mail.yml.
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+  jackson:
+    default-property-inclusion: non_null
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 5MB
+      # Several photos can be uploaded in one submit, so the whole request is larger.
+      max-request-size: 32MB
+
+server:
+  port: ${SERVER_PORT:8080}
+  error:
+    include-message: always
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when-authorized
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+
+logging:
+  level:
+    com.harish.pickles: INFO
+
+app:
+  base-url: ${APP_BASE_URL:https://srivinayakabakeryhome.com}
+  mail:
+    from: ${MAIL_FROM:Sri Vinayaka Bakery Home <hello@srivinayakabakeryhome.com>}
+    # With no SMTP host, write the reset link to the log so the flow works locally. Off under "prod".
+    log-links-when-unconfigured: true
+  password-reset:
+    expiry-minutes: 60
+    resend-cooldown-seconds: 60
+  shipping:
+    # Flat shipping fee in paise (INR 60.00). Free above the threshold.
+    flat-fee-paise: 6000
+    free-above-paise: 99900
+  storage:
+    # Uploaded product photos. A relative path resolves against the folder you
+    # run the app from, so this becomes <working-dir>/uploads/products.
+    # Back this folder up along with the database.
+    upload-dir: ${UPLOAD_DIR:./uploads/products}
+    max-file-size-bytes: 5242880
+    max-images-per-product: 6
+  security:
+    jwt:
+      secret: ${JWT_SECRET:local-dev-only-secret-change-me-please-32chars-min}
+      # access token validity in minutes
+      expiry-minutes: 720
+      issuer: sri-vinayaka-bakery-home
+  admin:
+    # Seeded on first start when no ADMIN account exists.
+    email: ${ADMIN_EMAIL:admin@srivinayakabakeryhome.com}
+    password: ${ADMIN_PASSWORD:Admin@12345}
+    name: Store Admin
+  super-admin:
+    # Seeded on first start when no SUPER_ADMIN account exists. Change this password.
+    email: ${SUPER_ADMIN_EMAIL:superadmin@srivinayakabakeryhome.com}
+    password: ${SUPER_ADMIN_PASSWORD:Super@12345}
+    name: Super Admin
+
+google:
+  maps:
+    # Blank disables every map (checkout falls back to address-only, no delivery pin; the
+    # storefront footer and admin store-location screen fall back to plain text/number fields).
+    api-key: ${GOOGLE_MAPS_API_KEY:}
+
+payments:
+  # QR     = customer scans the store's UPI QR and a human confirms payment afterwards.
+  # PHONEPE = hand off to the PhonePe gateway, confirmed automatically.
+  # PAYTM  = Paytm Dynamic QR for the exact order amount, confirmed automatically.
+  mode: ${PAYMENTS_MODE:QR}
+  upi-id: ${PAYMENTS_UPI_ID:9441187779@ybl}
+  payee-name: ${PAYMENTS_PAYEE_NAME:Sri Vinayaka Bakery Home}
+  qr-image: /images/payment-qr.jpg
+  confirmation-hours: 24
+  customer-care-mobile: ${PAYMENTS_CARE_MOBILE:9441187779}
+  customer-care-email: ${PAYMENTS_CARE_EMAIL:hello@srivinayakabakeryhome.com}
+  phonepe:
+    # true = no network calls, a local mock checkout page stands in for PhonePe.
+    # Flip to false once you have live client credentials. Only used while mode=PHONEPE.
+    mock: ${PHONEPE_MOCK:true}
+    environment: ${PHONEPE_ENVIRONMENT:SANDBOX}
+    client-id: ${PHONEPE_CLIENT_ID:}
+    client-secret: ${PHONEPE_CLIENT_SECRET:}
+    client-version: ${PHONEPE_CLIENT_VERSION:1}
+    redirect-url: ${PHONEPE_REDIRECT_URL:https://srivinayakabakeryhome.com/payment/callback}
+    # Order expiry handed to PhonePe, in seconds (300-3600).
+    expire-after-seconds: 1200
+    webhook:
+      username: ${PHONEPE_WEBHOOK_USERNAME:vinayakabakery}
+      password: ${PHONEPE_WEBHOOK_PASSWORD:change-me}
+  paytm:
+    # true = no network calls, a local mock checkout page stands in for Paytm.
+    # Flip to false once you have a live merchant account. Only used while mode=PAYTM.
+    mock: ${PAYTM_MOCK:true}
+    environment: ${PAYTM_ENVIRONMENT:STAGING}
+    mid: ${PAYTM_MID:}
+    merchant-key: ${PAYTM_MERCHANT_KEY:}
+    website: ${PAYTM_WEBSITE:WEBSTAGING}
+    industry-type: ${PAYTM_INDUSTRY_TYPE:Retail}
+    channel-id: ${PAYTM_CHANNEL_ID:WEB}
+    pos-id: ${PAYTM_POS_ID:STORE1}
+    callback-url: ${PAYTM_CALLBACK_URL:https://srivinayakabakeryhome.com/api/payments/paytm/webhook}
+    expire-after-seconds: 600

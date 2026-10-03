@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/panel :: head('Mail')}"></head>
+<body>
+<div class="shell">
+    <aside th:replace="~{fragments/panel :: sidebar('mail')}"></aside>
+
+    <main class="work">
+        <div class="topbar">
+            <div>
+                <h1>Mail</h1>
+                <div class="crumb" th:text="|${messages.size()} message(s)|">0</div>
+            </div>
+            <a class="btn" th:href="@{/admin/mail/compose}">+ Compose</a>
+        </div>
+
+        <div class="work-body">
+            <div th:replace="~{fragments/panel :: flash}"></div>
+
+            <div class="notice bad" th:if="${mailError}">
+                <span class="ico">&#9888;</span><span th:text="${mailError}"></span>
+            </div>
+
+            <div class="filters">
+                <a class="tab" th:classappend="${folder == 'inbox'} ? 'active' : ''"
+                   th:href="@{/admin/mail(folder='inbox', userId=${selectedUserId})}">Inbox</a>
+                <a class="tab" th:classappend="${folder == 'sent'} ? 'active' : ''"
+                   th:href="@{/admin/mail(folder='sent', userId=${selectedUserId})}">Sent</a>
+            </div>
+
+            <form class="filters" th:if="${isSuperAdmin}" th:action="@{/admin/mail}" method="get">
+                <input type="hidden" name="folder" th:value="${folder}">
+                <label class="muted small" for="userFilter">Filter by user</label>
+                <select id="userFilter" name="userId" onchange="this.form.submit()">
+                    <option value="">All mail</option>
+                    <option th:each="u : ${pickerUsers}" th:value="${u.id}"
+                            th:selected="${selectedUserId != null and selectedUserId == u.id}"
+                            th:text="|${u.fullName} (${u.email})|"></option>
+                </select>
+                <a class="btn ghost" th:if="${selectedUserId != null}"
+                   th:href="@{/admin/mail(folder=${folder})}">Clear</a>
+                <span class="muted small" th:if="${filterUser != null}"
+                      th:text="|Showing mail with ${filterUser.email}|"></span>
+            </form>
+
+            <div class="empty" th:if="${messages.isEmpty()}">
+                <div class="ico">&#9993;</div>
+                <h3>No messages to show</h3>
+                <p th:if="${mailError == null}">Nothing in this folder yet.</p>
+            </div>
+
+            <div class="table-wrap" th:unless="${messages.isEmpty()}">
+                <div class="table-scroll">
+                    <table class="data">
+                        <thead>
+                        <tr>
+                            <th th:text="${folder == 'sent'} ? 'To' : 'From'">From</th>
+                            <th>Subject</th>
+                            <th>Date</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="m : ${messages}">
+                            <td th:text="${folder == 'sent'} ? ${m.to} : ${m.from}">someone@example.com</td>
+                            <td>
+                                <a th:href="@{'/admin/mail/' + ${m.uid}(folder=${folder})}"
+                                   th:text="${m.subject} ?: '(no subject)'"
+                                   th:style="${m.read} ? '' : 'font-weight:700'">Subject</a>
+                            </td>
+                            <td class="muted small nowrap"
+                                th:text="${m.sentDate != null} ? ${#temporals.format(m.sentDate, 'dd MMM yyyy, HH:mm')} : '—'"></td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+</body>
+</html>

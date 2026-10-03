@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Mock PhonePe checkout')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: header('')}"></header>
+
+<div class="section">
+    <div class="wrap-narrow">
+        <div class="notice info">
+            <span class="ico">&#9881;</span>
+            <span>This screen stands in for the real PhonePe checkout while
+                <code>payments.phonepe.mock=true</code>. No money moves.</span>
+        </div>
+
+        <div class="panel center">
+            <h2 class="mt-0">Mock PhonePe</h2>
+            <p class="muted">Order <strong th:text="${merchantOrderId}">HP-…</strong></p>
+            <p style="font-size:var(--fs-3xl);font-weight:800;margin:8px 0 24px" th:if="${payment != null}"
+               th:text="${T(com.harish.pickles.dto.Money).format(payment.amountPaise)}">₹0</p>
+
+            <div class="btn-row" style="justify-content:center">
+                <form th:action="@{'/mock-gateway/' + ${merchantOrderId}}" method="post">
+                    <input type="hidden" name="success" value="true">
+                    <button class="btn lg" type="submit">Simulate successful payment</button>
+                </form>
+                <form th:action="@{'/mock-gateway/' + ${merchantOrderId}}" method="post">
+                    <input type="hidden" name="success" value="false">
+                    <button class="btn lg danger" type="submit">Simulate failure</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Your cart')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: header('cart')}"></header>
+<div th:replace="~{fragments/layout :: flash}"></div>
+
+<div class="wrap section">
+    <div class="section-head">
+        <div>
+            <h2>Your cart</h2>
+            <p th:if="${cart.totalItems > 0}" th:text="|${cart.totalItems} jar(s) ready to go|"></p>
+        </div>
+        <a class="btn ghost" th:href="@{/products}">Keep shopping</a>
+    </div>
+
+    <div class="empty" th:if="${cart.totalItems == 0}">
+        <div class="ico">🛒</div>
+        <h3>Your cart is empty</h3>
+        <p>Start with a jar of avakaya — it is what most people order first.</p>
+        <a class="btn" th:href="@{/products}">Browse the foods</a>
+    </div>
+
+    <div class="split" th:if="${cart.totalItems > 0}">
+        <div class="table-wrap">
+            <div class="table-scroll">
+                <table class="data">
+                    <thead>
+                    <tr><th>Food</th><th>Price</th><th>Jars</th><th class="num">Total</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="line : ${cart.lines}">
+                        <td>
+                            <div class="cell-title">
+                                <img class="cell-thumb" th:if="${line.imageUrl != null}"
+                                     th:src="${line.imageUrl}" th:alt="${line.name}">
+                                <span class="cell-thumb" th:if="${line.imageUrl == null}"
+                                      th:classappend="${line.pickleType == 'Veg'} ? '' : 'nonveg'"
+                                      th:text="${line.pickleType == 'Veg'} ? '🥭' : '🍗'">🥭</span>
+                                <span>
+                                    <a th:href="@{'/products/' + ${line.slug}}" th:text="${line.name}">Food</a>
+                                    <div class="sub" th:text="|${line.pickleType} · ${line.weightGrams} g|"></div>
+                                </span>
+                            </div>
+                        </td>
+                        <td class="nowrap" th:text="'₹' + ${line.unitPrice}">₹0</td>
+                        <td>
+                            <form th:action="@{/cart/update}" method="post" class="qty">
+                                <input type="hidden" name="productId" th:value="${line.productId}">
+                                <input type="number" name="quantity" th:value="${line.quantity}" min="0"
+                                       th:max="${line.stockQty}">
+                                <button class="btn ghost sm" type="submit">Update</button>
+                            </form>
+                        </td>
+                        <td class="num nowrap" th:text="'₹' + ${line.lineTotal}">₹0</td>
+                        <td>
+                            <form th:action="@{/cart/remove}" method="post">
+                                <input type="hidden" name="productId" th:value="${line.productId}">
+                                <button class="btn danger-ghost sm" type="submit">Remove</button>
+                            </form>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="panel sticky-side">
+            <h3 class="mt-0">Order summary</h3>
+            <ul class="totals">
+                <li><span th:text="|Subtotal (${cart.totalItems} jars)|">Subtotal</span>
+                    <span th:text="'₹' + ${cart.subtotal}">₹0</span></li>
+                <li th:classappend="${cart.freeShippingApplied} ? 'free' : ''">
+                    <span>Shipping</span>
+                    <span th:text="${cart.freeShippingApplied} ? 'Free' : '₹' + ${cart.shipping}">₹0</span></li>
+                <li th:if="${appliedCoupon != null}">
+                    <span th:text="|Coupon (${appliedCoupon})|">Coupon</span>
+                    <span th:text="'−₹' + ${couponDiscount}">−₹0</span></li>
+                <li class="grand"><span>Total</span>
+                    <span th:text="'₹' + (${appliedCoupon != null} ? (${cart.total} - ${couponDiscount}) : ${cart.total})">₹0</span></li>
+            </ul>
+
+            <div class="notice info mt-4" th:unless="${cart.freeShippingApplied}">
+                <span class="ico">🚚</span>
+                <span th:text="|Spend ₹${cart.freeShippingAbove} in total and shipping is on us.|"></span>
+            </div>
+
+            <div class="notice ok mt-4" th:if="${appliedCoupon != null}">
+                <span class="ico">&#127991;</span>
+                <span><strong th:text="${appliedCoupon}">CODE</strong> applied — you saved
+                    ₹<span th:text="${couponDiscount}">0</span>.</span>
+            </div>
+            <form th:if="${appliedCoupon != null}" th:action="@{/cart/coupon/remove}" method="post" class="mt-0">
+                <input type="hidden" name="returnTo" value="/cart">
+                <button class="btn ghost sm block" type="submit">Remove coupon</button>
+            </form>
+
+            <form th:unless="${appliedCoupon != null}" th:action="@{/cart/coupon}" method="post"
+                  class="row-2 mt-4">
+                <input type="hidden" name="returnTo" value="/cart">
+                <input type="text" name="code" placeholder="Have a coupon code?"
+                       style="text-transform:uppercase" maxlength="32">
+                <button class="btn ghost" type="submit">Apply</button>
+            </form>
+
+            <a class="btn lg block mt-4" th:href="@{/checkout}">Checkout</a>
+            <p class="muted small center mt-4 mb-0" th:if="${qrMode}">Pay by scanning our UPI QR after you place the order</p>
+            <p class="muted small center mt-4 mb-0" th:unless="${qrMode}">Pay by UPI, card or net banking via PhonePe</p>
+        </div>
+    </div>
+</div>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

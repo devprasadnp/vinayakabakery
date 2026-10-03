@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/panel :: head(${category == null} ? 'New category' : 'Edit category')}"></head>
+<body>
+<div class="shell">
+    <aside th:replace="~{fragments/panel :: sidebar('categories')}"></aside>
+
+    <main class="work">
+        <div class="topbar">
+            <div>
+                <h1 th:text="${category == null} ? 'New category' : ${category.name}">New category</h1>
+                <div class="crumb" th:text="${category == null}
+                     ? 'Add a new accordion section for the storefront'
+                     : 'Edit the details, or hide it without deleting it'">Details</div>
+            </div>
+            <a class="btn ghost" th:href="@{/admin/categories}">← All categories</a>
+        </div>
+
+        <div class="work-body">
+            <div th:replace="~{fragments/panel :: flash}"></div>
+
+            <div class="split">
+                <form class="panel" th:action="@{/admin/categories}" method="post">
+                    <input type="hidden" name="id" th:if="${category != null}" th:value="${category.id}">
+
+                    <div class="panel-head"><h3>Details</h3></div>
+
+                    <div class="row-2">
+                        <div class="field">
+                            <label for="name">Name</label>
+                            <input id="name" name="name" required maxlength="80"
+                                   placeholder="Snacks" th:value="${category != null} ? ${category.name} : ''">
+                            <div class="hint">Shown as the accordion heading on the storefront.</div>
+                        </div>
+                        <div class="field">
+                            <label for="icon">Icon <span class="muted">(optional, one emoji)</span></label>
+                            <input id="icon" name="icon" maxlength="8" placeholder="🍿"
+                                   th:value="${category != null} ? ${category.icon} : ''">
+                        </div>
+                    </div>
+
+                    <div class="row-2">
+                        <div class="field">
+                            <label for="veg">Dietary</label>
+                            <select id="veg" name="veg">
+                                <option value="" th:selected="${category == null or category.veg == null}">Either veg or non-veg</option>
+                                <option value="true" th:selected="${category != null and category.veg != null and category.veg}">Veg only</option>
+                                <option value="false" th:selected="${category != null and category.veg != null and !category.veg}">Non-veg only</option>
+                            </select>
+                            <div class="hint">"Veg only" or "Non-veg only" shows a dietary dot on every card in
+                                this category. Leave it as "Either" when products inside can be both.</div>
+                        </div>
+                        <div class="field">
+                            <label for="displayOrder">Display order</label>
+                            <input id="displayOrder" name="displayOrder" type="number" min="0"
+                                   th:value="${category != null} ? ${category.displayOrder} : '0'">
+                            <div class="hint">Lower numbers appear first in the accordion.</div>
+                        </div>
+                    </div>
+
+                    <div class="field inline-check">
+                        <label>
+                            <input type="checkbox" name="active" value="true"
+                                   th:checked="${category == null or category.active}">
+                            Show this category on the storefront
+                        </label>
+                    </div>
+
+                    <div class="form-actions">
+                        <button class="btn lg" type="submit">Save category</button>
+                        <a class="btn ghost" th:href="@{/admin/categories}">Cancel</a>
+                    </div>
+                </form>
+
+                <div class="sticky-side">
+                    <div class="panel">
+                        <h3 class="mt-0">How it's used</h3>
+                        <p class="small muted">Every food picks exactly one of these categories - it decides
+                            which accordion section it shows up under on the storefront, and is a filter on
+                            both the customer and admin product lists.</p>
+                        <p class="small muted mb-0">Hiding a category (unchecking the box above) keeps its
+                            products intact, it just stops showing on the storefront until you turn it back on.</p>
+                    </div>
+
+                    <div class="panel danger-box" sec:authorize="hasRole('SUPER_ADMIN')" th:if="${category != null}">
+                        <h3>Danger zone</h3>
+                        <p class="small">Archiving hides this category everywhere. You can restore it, or delete
+                            it for good from the archive — only once no food is left in it.</p>
+                        <form th:action="@{'/superadmin/categories/' + ${category.id} + '/archive'}" method="post"
+                              onsubmit="return confirm('Archive this category? It disappears from the shop but nothing is deleted yet.');">
+                            <button class="btn danger block" type="submit">Archive this category</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+</body>
+</html>

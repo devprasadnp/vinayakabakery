@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Foods')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: header(${navActive})}"></header>
+<div th:replace="~{fragments/layout :: flash}"></div>
+
+<div class="wrap section">
+    <div class="section-head">
+        <div>
+            <h2 th:text="${selectedCategory != null} ? ${selectedCategory.name}
+                         : (${type == null} ? 'All'
+                         : (${type.name() == 'VEG'} ? 'Veg foods' : 'Non-veg foods'))">All</h2>
+            <p th:text="|${products.totalElements} item(s) available|">0 items</p>
+        </div>
+    </div>
+
+    <div class="section-body-split">
+        <!-- ===================================================== category accordion -->
+        <aside class="accordion" aria-label="Browse by category">
+            <details th:each="entry : ${inventoryCategories}" th:open="${selectedCategory != null and selectedCategory.id == entry.key.id}">
+                <summary>
+                    <span th:text="${entry.key.badge}">🏷️</span>
+                    <span th:text="${entry.key.name}">Category</span>
+                    <span class="muted small" th:text="'(' + ${entry.value} + ')'">(0)</span>
+                </summary>
+                <a class="accordion-link" th:classappend="${categoryId != null and categoryId == entry.key.id} ? 'active' : ''"
+                   th:href="@{/products(categoryId=${entry.key.id}, sort=${sort})}">
+                    Browse <span th:text="${entry.key.name}">category</span> →
+                </a>
+            </details>
+            <a class="accordion-link all" th:if="${categoryId != null}" th:href="@{/products(sort=${sort})}">
+                ← Show every category
+            </a>
+        </aside>
+
+        <div class="section-main">
+            <form class="filters" th:action="@{/products}" method="get">
+                <a class="tab" th:classappend="${type == null} ? 'active' : ''"
+                   th:href="@{/products(categoryId=${categoryId}, sort=${sort})}">All</a>
+                <a class="tab" th:classappend="${type != null and type.name() == 'VEG'} ? 'active' : ''"
+                   th:href="@{/products(type='VEG', categoryId=${categoryId}, sort=${sort})}">Veg</a>
+                <a class="tab nonveg" th:classappend="${type != null and type.name() == 'NON_VEG'} ? 'active' : ''"
+                   th:href="@{/products(type='NON_VEG', categoryId=${categoryId}, sort=${sort})}">Non-Veg</a>
+                <input type="hidden" name="type" th:value="${type != null} ? ${type.name()} : ''">
+                <input type="hidden" name="categoryId" th:value="${categoryId}">
+
+                <input type="search" name="q" placeholder="Search mango, gongura, prawn…" th:value="${q}">
+
+                <select name="sort" onchange="this.form.submit()">
+                    <option value="name" th:selected="${sort == null or sort == 'name'}">Name A-Z</option>
+                    <option value="newest" th:selected="${sort == 'newest'}">Newest first</option>
+                    <option value="price_asc" th:selected="${sort == 'price_asc'}">Price: Low to High</option>
+                    <option value="price_desc" th:selected="${sort == 'price_desc'}">Price: High to Low</option>
+                </select>
+
+                <button class="btn ghost" type="submit">Search</button>
+                <a class="btn ghost" th:href="@{/products}"
+                   th:if="${q != null and !q.isEmpty() or categoryId != null or type != null}">Clear</a>
+            </form>
+
+            <div class="grid" th:if="${!products.isEmpty()}">
+                <th:block th:each="p : ${products.content}">
+                    <div th:replace="~{fragments/layout :: productCard(${p})}"></div>
+                </th:block>
+            </div>
+
+            <div class="empty" th:if="${products.isEmpty()}">
+                <div class="ico">🫙</div>
+                <h3>Nothing matched that search</h3>
+                <p>Try a different spelling, or browse the full shelf.</p>
+                <a class="btn" th:href="@{/products}">Show every food</a>
+            </div>
+
+            <div class="stack mt-5" th:if="${products.totalPages > 1}">
+                <a class="btn ghost sm" th:if="${!products.first}"
+                   th:href="@{/products(type=${type != null ? type.name() : null}, categoryId=${categoryId}, q=${q}, sort=${sort}, page=${products.number - 1})}">← Previous</a>
+                <span class="muted small" th:text="|Page ${products.number + 1} of ${products.totalPages}|">Page</span>
+                <a class="btn ghost sm" th:if="${!products.last}"
+                   th:href="@{/products(type=${type != null ? type.name() : null}, categoryId=${categoryId}, q=${q}, sort=${sort}, page=${products.number + 1})}">Next →</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

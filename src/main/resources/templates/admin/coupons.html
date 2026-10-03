@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/panel :: head('Coupons')}"></head>
+<body>
+<div class="shell">
+    <aside th:replace="~{fragments/panel :: sidebar('coupons')}"></aside>
+
+    <main class="work">
+        <div class="topbar">
+            <div>
+                <h1>Coupons</h1>
+                <div class="crumb" th:text="|${coupons.totalElements} coupon(s)|">0</div>
+            </div>
+            <a class="btn" th:href="@{/admin/coupons/new}">+ New coupon</a>
+        </div>
+
+        <div class="work-body">
+            <div th:replace="~{fragments/panel :: flash}"></div>
+
+            <form class="filters" th:action="@{/admin/coupons}" method="get">
+                <input type="search" name="q" placeholder="Search by code" th:value="${q}">
+                <button class="btn ghost" type="submit">Search</button>
+                <a class="btn ghost" th:if="${q != null and !q.isEmpty()}" th:href="@{/admin/coupons}">Clear</a>
+            </form>
+
+            <div class="empty" th:if="${coupons.isEmpty()}">
+                <div class="ico">🏷️</div>
+                <h3>No coupons yet</h3>
+                <p>Create one to offer a discount on the storefront.</p>
+                <a class="btn" th:href="@{/admin/coupons/new}">Create the first coupon</a>
+            </div>
+
+            <div class="table-wrap" th:unless="${coupons.isEmpty()}">
+                <div class="table-scroll">
+                    <table class="data">
+                        <thead>
+                        <tr><th>Code</th><th>Discount</th><th class="num">Min order</th>
+                            <th>Usage</th><th>Validity</th><th>Status</th><th></th>
+                            <th sec:authorize="hasRole('SUPER_ADMIN')"></th></tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="c : ${coupons.content}">
+                            <td>
+                                <strong th:text="${c.code}">SAVE10</strong>
+                                <div class="sub" th:if="${c.description != null}" th:text="${c.description}"></div>
+                            </td>
+                            <td th:text="${c.describeDiscount()}">10% off</td>
+                            <td class="num nowrap"
+                                th:text="${c.minOrderPaise > 0} ? ${T(com.harish.pickles.dto.Money).format(c.minOrderPaise)} : '—'">—</td>
+                            <td class="muted small nowrap">
+                                <span th:text="${c.usedCount}">0</span> /
+                                <span th:text="${c.totalUsageLimit != null} ? ${c.totalUsageLimit} : '∞'">∞</span>
+                                total
+                                <div th:if="${c.perCustomerLimit != null}"
+                                     th:text="|max ${c.perCustomerLimit} per customer|"></div>
+                            </td>
+                            <td class="muted small nowrap">
+                                <div th:if="${c.startAt != null}"
+                                     th:text="|From ${#temporals.format(c.startAt, 'dd MMM yyyy')}|"></div>
+                                <div th:if="${c.endAt != null}"
+                                     th:text="|Until ${#temporals.format(c.endAt, 'dd MMM yyyy')}|"></div>
+                                <div th:if="${c.startAt == null and c.endAt == null}">No date limit</div>
+                            </td>
+                            <td>
+                                <form th:action="@{'/admin/coupons/' + ${c.id} + '/toggle'}" method="post">
+                                    <input type="hidden" name="active" th:value="${!c.active}">
+                                    <button type="submit" class="btn sm"
+                                            th:classappend="${c.active} ? 'subtle' : 'ghost'"
+                                            th:text="${c.active} ? 'Active' : 'Paused'">Active</button>
+                                </form>
+                            </td>
+                            <td>
+                                <a class="btn ghost sm" th:href="@{'/admin/coupons/' + ${c.id} + '/edit'}">Edit</a>
+                            </td>
+                            <td sec:authorize="hasRole('SUPER_ADMIN')">
+                                <form th:action="@{'/superadmin/coupons/' + ${c.id} + '/archive'}" method="post"
+                                      onsubmit="return confirm('Archive this coupon? Customers will no longer be able to apply it.');">
+                                    <button class="btn danger-ghost sm" type="submit">Archive</button>
+                                </form>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="stack mt-4" th:if="${coupons.totalPages > 1}">
+                <a class="btn ghost sm" th:if="${!coupons.first}"
+                   th:href="@{/admin/coupons(q=${q}, page=${coupons.number - 1})}">← Previous</a>
+                <span class="muted small" th:text="|Page ${coupons.number + 1} of ${coupons.totalPages}|"></span>
+                <a class="btn ghost sm" th:if="${!coupons.last}"
+                   th:href="@{/admin/coupons(q=${q}, page=${coupons.number + 1})}">Next →</a>
+            </div>
+        </div>
+    </main>
+</div>
+</body>
+</html>
