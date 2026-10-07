@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#5C1D06">
     <title th:text="|${title} · Sri Vinayaka Bakery Home|">Admin</title>
+    <link rel="icon" type="image/png" th:href="@{/images/logo.png}">
     <link rel="stylesheet" th:href="@{/css/app.css}">
 </head>
 <body>
@@ -17,7 +18,8 @@
         <span>
             Sri Vinayaka Bakery Home
             <small sec:authorize="hasRole('SUPER_ADMIN')">Super Admin</small>
-            <small sec:authorize="!hasRole('SUPER_ADMIN')">Admin</small>
+            <small sec:authorize="hasRole('ADMIN') and !hasRole('SUPER_ADMIN')">Admin</small>
+            <small sec:authorize="hasRole('STORE_MANAGER')">Store Manager</small>
         </span>
     </a>
 
@@ -31,10 +33,14 @@
             <span>&#128193;</span> Categories</a>
         <a th:href="@{/admin/orders}" th:classappend="${active == 'orders'} ? 'active' : ''">
             <span>&#9642;</span> Orders</a>
-        <a th:href="@{/admin/coupons}" th:classappend="${active == 'coupons'} ? 'active' : ''">
+        <a sec:authorize="hasRole('ADMIN')" th:href="@{/admin/coupons}" th:classappend="${active == 'coupons'} ? 'active' : ''">
             <span>&#127991;</span> Coupons</a>
+        <a sec:authorize="hasRole('ADMIN')" th:href="@{/admin/payments}" th:classappend="${active == 'payments'} ? 'active' : ''">
+            <span>&#8377;</span> Payments (PhonePe)</a>
+        <a sec:authorize="!hasRole('ADMIN')" th:href="@{/products}"><span>&#8599;</span> Place an order (storefront)</a>
     </nav>
 
+    <div sec:authorize="hasRole('ADMIN')">
     <div class="group">Delivery</div>
     <nav>
         <a th:href="@{/admin/delivery-areas}" th:classappend="${active == 'areas'} ? 'active' : ''">
@@ -42,13 +48,19 @@
         <a th:href="@{/admin/delivery-partners}" th:classappend="${active == 'partners'} ? 'active' : ''">
             <span>&#128666;</span> Delivery partners</a>
     </nav>
+    </div>
 
+    <div sec:authorize="hasRole('ADMIN')">
     <div class="group">People</div>
     <nav>
         <a th:href="@{/admin/customers}" th:classappend="${active == 'customers'} ? 'active' : ''">
             <span>&#9679;</span> Customers</a>
+        <a th:href="@{/admin/store-managers}" th:classappend="${active == 'managers'} ? 'active' : ''">
+            <span>&#128188;</span> Store managers</a>
     </nav>
+    </div>
 
+    <div sec:authorize="hasRole('ADMIN')">
     <div class="group">Mail</div>
     <nav>
         <a th:href="@{/admin/mail}" th:classappend="${active == 'mail'} ? 'active' : ''">
@@ -56,6 +68,7 @@
         <a th:href="@{/admin/mail/compose}" th:classappend="${active == 'mail-compose'} ? 'active' : ''">
             <span>&#9998;</span> Compose</a>
     </nav>
+    </div>
 
     <div sec:authorize="hasRole('SUPER_ADMIN')">
         <div class="group">Super admin</div>
@@ -68,13 +81,17 @@
         </nav>
     </div>
 
+    <div sec:authorize="hasRole('ADMIN')">
     <div class="group">Store</div>
     <nav>
         <a th:href="@{/admin/store-location}" th:classappend="${active == 'store-location'} ? 'active' : ''">
             <span>&#128506;</span> Store location</a>
+        <a th:href="@{/admin/google-maps}" th:classappend="${active == 'google-maps'} ? 'active' : ''">
+            <span>&#128273;</span> Google Maps keys</a>
         <a th:href="@{/}"><span>&#8599;</span> View storefront</a>
         <a th:href="@{/swagger-ui.html}"><span>&#8599;</span> API docs</a>
     </nav>
+    </div>
 
     <div class="side-foot">
         Signed in as<br>

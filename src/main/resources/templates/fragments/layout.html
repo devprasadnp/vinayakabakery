@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#EA580C">
     <title th:text="|${title} · Sri Vinayaka Bakery Home|">Sri Vinayaka Bakery Home</title>
+    <link rel="icon" type="image/png" th:href="@{/images/logo.png}">
     <link rel="stylesheet" th:href="@{/css/app.css}">
 </head>
 <body>
@@ -24,7 +25,7 @@
             <a th:href="@{/products(type='NON_VEG')}" th:classappend="${active == 'nonveg'} ? 'active' : ''">Non-Veg</a>
             <a sec:authorize="isAuthenticated()" th:href="@{/orders}"
                th:classappend="${active == 'orders'} ? 'active' : ''">My orders</a>
-            <a sec:authorize="hasRole('ADMIN')" th:href="@{/admin}">Admin panel</a>
+            <a sec:authorize="hasAnyRole('ADMIN','STORE_MANAGER')" th:href="@{/admin}">Admin panel</a>
             <a sec:authorize="hasRole('DELIVERY_PARTNER')" th:href="@{/delivery}"
                th:classappend="${active == 'delivery'} ? 'active' : ''">My deliveries</a>
 

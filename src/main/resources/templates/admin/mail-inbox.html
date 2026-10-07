@@ -3,6 +3,27 @@
       xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head th:replace="~{fragments/panel :: head('Mail')}"></head>
 <body>
+<style th:fragment="mailStyle">
+    .mail-tools{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+    .mail-card{background:#fff;border:1px solid #e5e0d8;border-radius:12px;overflow:hidden}
+    .mail-card .hdr{padding:18px 22px;border-bottom:1px solid #e5e0d8}
+    .mail-card .hdr h2{margin:0 0 10px;font-size:20px}
+    .meta-row{display:flex;gap:10px;font-size:14px;margin:3px 0}
+    .meta-row .k{width:54px;color:#777;flex:none}
+    .mail-card .bodytext{padding:22px;white-space:pre-wrap;line-height:1.6;font-size:15px}
+    .mail-card iframe{display:block;width:100%;border:0;height:70vh;min-height:420px;background:#fff}
+    .compose{max-width:820px}
+    .compose .row{display:flex;align-items:center;border-bottom:1px solid #e5e0d8;padding:2px 18px}
+    .compose .row label{width:64px;color:#777;font-size:14px;flex:none}
+    .compose .row input{border:0;outline:0;flex:1;padding:12px 4px;font-size:15px;background:transparent;box-shadow:none}
+    .compose textarea{display:block;width:100%;border:0;outline:0;padding:18px;min-height:300px;font-size:15px;line-height:1.6;resize:vertical;background:transparent;box-sizing:border-box}
+    .compose .bar{display:flex;gap:10px;align-items:center;padding:14px 18px;border-top:1px solid #e5e0d8;background:#faf7f2}
+    .compose .bar .from{margin-left:auto;color:#777;font-size:13px}
+    .inbox-row.unread td{font-weight:700;background:#fff7ed}
+    .inbox-row td a{color:inherit}
+    .inbox-row .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#9a3412;margin-right:8px}
+    .inbox-row .dot.read{background:transparent}
+</style>
 <div class="shell">
     <aside th:replace="~{fragments/panel :: sidebar('mail')}"></aside>
 
@@ -58,18 +79,24 @@
                             <th th:text="${folder == 'sent'} ? 'To' : 'From'">From</th>
                             <th>Subject</th>
                             <th>Date</th>
+                            <th></th>
                         </tr>
                         </thead>
                         <tbody>
-                        <tr th:each="m : ${messages}">
-                            <td th:text="${folder == 'sent'} ? ${m.to} : ${m.from}">someone@example.com</td>
+                        <tr class="inbox-row" th:each="m : ${messages}" th:classappend="${m.read or folder == 'sent'} ? '' : 'unread'">
+                            <td><span class="dot" th:classappend="${m.read or folder == 'sent'} ? 'read' : ''"></span><span
+                                  th:text="${folder == 'sent'} ? ${m.toName} : ${m.fromName}"
+                                  th:title="${folder == 'sent'} ? ${m.to} : ${m.from}">Someone</span></td>
                             <td>
                                 <a th:href="@{'/admin/mail/' + ${m.uid}(folder=${folder})}"
-                                   th:text="${m.subject} ?: '(no subject)'"
-                                   th:style="${m.read} ? '' : 'font-weight:700'">Subject</a>
+                                   th:text="${m.subject} ?: '(no subject)'">Subject</a>
                             </td>
                             <td class="muted small nowrap"
                                 th:text="${m.sentDate != null} ? ${#temporals.format(m.sentDate, 'dd MMM yyyy, HH:mm')} : '—'"></td>
+                            <td class="nowrap">
+                                <a class="small" th:href="@{/admin/mail/compose(mode='reply', uid=${m.uid}, folder=${folder})}">Reply</a> &middot;
+                                <a class="small" th:href="@{/admin/mail/compose(mode='replyall', uid=${m.uid}, folder=${folder})}">Reply all</a>
+                            </td>
                         </tr>
                         </tbody>
                     </table>

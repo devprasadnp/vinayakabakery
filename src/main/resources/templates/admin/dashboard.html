@@ -91,7 +91,7 @@
                 </div>
             </div>
 
-            <div class="panel">
+            <div class="panel" sec:authorize="hasRole('ADMIN')">
                 <div class="panel-head"><h3>Delivery &amp; people</h3></div>
                 <div class="btn-row">
                     <a class="btn ghost" th:href="@{/admin/delivery-areas}">Delivery areas</a>

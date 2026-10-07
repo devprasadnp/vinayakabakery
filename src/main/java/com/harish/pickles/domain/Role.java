@@ -13,7 +13,9 @@ public enum Role {
     USER("Customer"),
     ADMIN("Admin"),
     SUPER_ADMIN("Super Admin"),
-    DELIVERY_PARTNER("Delivery Partner");
+    DELIVERY_PARTNER("Delivery Partner"),
+    /** Runs inventory (foods, categories) and orders; no configuration, accounts or coupons. */
+    STORE_MANAGER("Store Manager");
 
     private final String label;
 
@@ -25,9 +27,9 @@ public enum Role {
         return label;
     }
 
-    /** Admin-level accounts. Delivery partners are intentionally excluded. */
+    /** Accounts that may look at any order: admins and store managers. Delivery partners are excluded. */
     public boolean isStaff() {
-        return this == ADMIN || this == SUPER_ADMIN;
+        return this == ADMIN || this == SUPER_ADMIN || this == STORE_MANAGER;
     }
 
     public boolean isDeliveryPartner() {

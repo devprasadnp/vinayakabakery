@@ -20,6 +20,8 @@ import com.harish.pickles.repository.ProductRepository;
 import com.harish.pickles.service.CartService;
 import com.harish.pickles.service.CouponService;
 import com.harish.pickles.service.CouponService.CouponPreview;
+import com.harish.pickles.service.DeliveryPricingService;
+import com.harish.pickles.service.DistanceService;
 import com.harish.pickles.service.InventoryCategoryService;
 import com.harish.pickles.service.OrderService;
 import com.harish.pickles.service.PaymentService;
@@ -60,12 +62,17 @@ public class StorefrontController {
     private final QrCodeService qrCodeService;
     private final CouponService couponService;
     private final InventoryCategoryService categoryService;
+    private final DistanceService distanceService;
+    private final DeliveryPricingService pricingService;
 
     public StorefrontController(ProductRepository productRepository, ProductService productService,
                                 CartService cartService, OrderService orderService,
                                 PaymentService paymentService, PaymentProperties paymentProperties,
                                 QrCodeService qrCodeService, CouponService couponService,
-                                InventoryCategoryService categoryService) {
+                                InventoryCategoryService categoryService, DistanceService distanceService,
+                                DeliveryPricingService pricingService) {
+        this.distanceService = distanceService;
+        this.pricingService = pricingService;
         this.productRepository = productRepository;
         this.productService = productService;
         this.cartService = cartService;
@@ -259,6 +266,36 @@ public class StorefrontController {
         model.addAttribute("qrMode", paymentProperties.isQrMode());
         addCouponAttributes(model, session, user);
         return "checkout";
+    }
+
+    /** What a customer would pay for delivery to a dropped pin, shown live on the checkout page. */
+    public record ShippingQuote(Double distanceKm, java.math.BigDecimal shipping, java.math.BigDecimal total,
+                                boolean free, String message) {
+    }
+
+    @GetMapping("/checkout/quote")
+    @ResponseBody
+    public ShippingQuote quote(@RequestParam(required = false) Double latitude,
+                               @RequestParam(required = false) Double longitude) {
+        User user = CurrentUser.require();
+        long subtotal = cartSubtotalPaise(user);
+        Double km = distanceService.distanceKm(latitude, longitude).orElse(null);
+        String message = null;
+        try {
+            pricingService.requireWithinRange(km);
+        } catch (BusinessException ex) {
+            message = ex.getMessage();
+        }
+        long shipping = cartService.shippingFor(subtotal, km);
+        return new ShippingQuote(km, Money.toRupees(shipping), Money.toRupees(subtotal + shipping),
+                subtotal > 0 && shipping == 0, message);
+    }
+
+    /** Live position of the courier for the customer's own order; polled by the order page. */
+    @GetMapping("/orders/{orderNumber}/tracking")
+    @ResponseBody
+    public OrderService.Tracking tracking(@PathVariable String orderNumber) {
+        return orderService.trackingFor(orderNumber, CurrentUser.require());
     }
 
     @PostMapping("/checkout")

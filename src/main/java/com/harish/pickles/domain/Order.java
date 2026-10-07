@@ -78,6 +78,20 @@ public class Order extends BaseEntity {
     @Column(name = "assigned_at")
     private LocalDateTime assignedAt;
 
+    /** Road distance from the store to the delivery pin, in km. Null when no pin or no store location. */
+    @Column(name = "distance_km")
+    private Double distanceKm;
+
+    /** The courier's last reported position, refreshed while the order is out for delivery. */
+    @Column(name = "partner_latitude")
+    private Double partnerLatitude;
+
+    @Column(name = "partner_longitude")
+    private Double partnerLongitude;
+
+    @Column(name = "partner_location_at")
+    private LocalDateTime partnerLocationAt;
+
     /** Hidden from the normal order lists by a super admin, still in the database. */
     @Column(nullable = false)
     private boolean archived = false;

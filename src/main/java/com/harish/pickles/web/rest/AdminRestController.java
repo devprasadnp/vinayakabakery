@@ -38,7 +38,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/admin")
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN', 'STORE_MANAGER')")
 @Tag(name = "Admin")
 public class AdminRestController {
 
@@ -136,6 +136,7 @@ public class AdminRestController {
 
     // --------------------------------------------------------------- coupons
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/coupons")
     @Operation(summary = "Coupons, including paused ones")
     public Page<CouponResponse> coupons(@RequestParam(required = false) String q,
@@ -144,18 +145,21 @@ public class AdminRestController {
         return couponService.catalogue(q, PageRequest.of(page, Math.min(size, 100))).map(CouponResponse::from);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/coupons")
     @Operation(summary = "Create a coupon")
     public ResponseEntity<CouponResponse> createCoupon(@Valid @RequestBody CouponRequest request) {
         return ResponseEntity.status(201).body(CouponResponse.from(couponService.create(request)));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/coupons/{id}")
     @Operation(summary = "Update a coupon's terms")
     public CouponResponse updateCoupon(@PathVariable Long id, @Valid @RequestBody CouponRequest request) {
         return CouponResponse.from(couponService.update(id, request));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PatchMapping("/coupons/{id}/active")
     @Operation(summary = "Pause or resume a coupon")
     public CouponResponse setCouponActive(@PathVariable Long id, @RequestParam boolean active) {

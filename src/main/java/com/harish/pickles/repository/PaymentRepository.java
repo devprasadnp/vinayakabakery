@@ -16,5 +16,8 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
     List<Payment> findByMerchantOrderIdIn(Collection<String> merchantOrderIds);
 
+    List<Payment> findByProviderAndStatusAndCreatedAtAfter(String provider, PaymentStatus status,
+                                                          java.time.LocalDateTime since);
+
     Optional<Payment> findByTransactionIdAndStatus(String transactionId, PaymentStatus status);
 }

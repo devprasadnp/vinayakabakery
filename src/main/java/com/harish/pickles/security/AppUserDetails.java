@@ -33,6 +33,10 @@ public class AppUserDetails implements UserDetails {
         if (role == Role.DELIVERY_PARTNER) {
             granted.add(new SimpleGrantedAuthority("ROLE_DELIVERY_PARTNER"));
         }
+        // Holds ROLE_USER too, so a store manager can place orders through the normal storefront checkout.
+        if (role == Role.STORE_MANAGER) {
+            granted.add(new SimpleGrantedAuthority("ROLE_STORE_MANAGER"));
+        }
         if (role == Role.ADMIN || role == Role.SUPER_ADMIN) {
             granted.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
         }

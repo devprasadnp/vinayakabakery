@@ -71,6 +71,45 @@ class ViewRenderingSmokeTest {
         mvc.perform(get("/admin/store-location").with(user(new AppUserDetails(admin)))).andExpect(status().isOk());
     }
 
+    @Test
+    void deliveryPricingAndPhonePeSettingsRenderForAnAdmin() throws Exception {
+        User admin = users.findByEmailIgnoreCase("admin@srivinayakabakeryhome.com").orElseThrow();
+        mvc.perform(get("/admin/delivery-pricing").with(user(new AppUserDetails(admin)))).andExpect(status().isOk());
+        mvc.perform(get("/admin/payments").with(user(new AppUserDetails(admin)))).andExpect(status().isOk());
+        mvc.perform(get("/admin/google-maps").with(user(new AppUserDetails(admin)))).andExpect(status().isOk());
+    }
+
+    @Test
+    void phonePeSettingsAreForbiddenToCustomers() throws Exception {
+        mvc.perform(get("/admin/payments").with(user(new AppUserDetails(newUser())))).andExpect(status().isForbidden());
+    }
+
+    @Test
+    void storeManagerReachesInventoryAndOrdersButNoConfiguration() throws Exception {
+        User manager = newUser();
+        manager.setRole(Role.STORE_MANAGER);
+        manager = users.save(manager);
+        var who = user(new AppUserDetails(manager));
+
+        for (String ok : new String[] {"/admin", "/admin/products", "/admin/categories", "/admin/orders"}) {
+            mvc.perform(get(ok).with(who)).andExpect(status().isOk());
+        }
+        for (String denied : new String[] {"/admin/payments", "/admin/delivery-pricing", "/admin/store-location",
+                "/admin/delivery-areas", "/admin/google-maps", "/admin/coupons", "/admin/customers", "/admin/store-managers",
+                "/admin/mail"}) {
+            mvc.perform(get(denied).with(who)).andExpect(status().isForbidden());
+        }
+        // A manager may still shop like a customer, so orders can be placed through checkout.
+        mvc.perform(get("/orders").with(who)).andExpect(status().isOk());
+    }
+
+    @Test
+    void adminCanOpenTheStoreManagersScreens() throws Exception {
+        User admin = users.findByEmailIgnoreCase("admin@srivinayakabakeryhome.com").orElseThrow();
+        mvc.perform(get("/admin/store-managers").with(user(new AppUserDetails(admin)))).andExpect(status().isOk());
+        mvc.perform(get("/admin/store-managers/new").with(user(new AppUserDetails(admin)))).andExpect(status().isOk());
+    }
+
     private User newUser() {
         String email = "smoke-" + UUID.randomUUID().toString().substring(0, 8) + "@test.in";
         User u = new User("Smoke Test", email, encoder.encode("Password1"), Role.USER);

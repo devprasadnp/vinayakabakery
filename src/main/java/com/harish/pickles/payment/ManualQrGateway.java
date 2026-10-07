@@ -3,7 +3,6 @@ package com.harish.pickles.payment;
 import com.harish.pickles.payment.GatewayModels.InitiateRequest;
 import com.harish.pickles.payment.GatewayModels.InitiateResult;
 import com.harish.pickles.payment.GatewayModels.StatusResult;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.stereotype.Component;
 
 /**
@@ -14,7 +13,6 @@ import org.springframework.stereotype.Component;
  * to satisfy {@code PaymentService}'s constructor, whichever mode is configured.
  */
 @Component
-@ConditionalOnExpression("'${payments.mode:QR}' == 'QR'")
 public class ManualQrGateway implements PaymentGateway {
 
     @Override

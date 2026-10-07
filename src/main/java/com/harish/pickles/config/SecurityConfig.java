@@ -72,6 +72,9 @@ public class SecurityConfig {
                         // Lets the checkout page (and any client) ask "do you deliver here?" before paying.
                         .requestMatchers(HttpMethod.GET, "/api/delivery-areas/check").permitAll()
                         .requestMatchers("/api/superadmin/**").hasRole("SUPER_ADMIN")
+                        // Store manager: inventory and orders only; everything else under /api/admin is config.
+                        .requestMatchers("/api/admin/products/**", "/api/admin/categories/**",
+                                "/api/admin/orders/**").hasAnyRole("ADMIN", "STORE_MANAGER")
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/delivery/**").hasRole("DELIVERY_PARTNER")
                         .anyRequest().authenticated())
@@ -95,6 +98,10 @@ public class SecurityConfig {
                                 "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**",
                                 "/actuator/health").permitAll()
                         .requestMatchers("/superadmin/**").hasRole("SUPER_ADMIN")
+                        // Store manager: dashboard, inventory and orders only; every configuration screen,
+                        // coupons and account management stay Admin / Super Admin.
+                        .requestMatchers("/admin", "/admin/products/**", "/admin/categories/**",
+                                "/admin/orders/**").hasAnyRole("ADMIN", "STORE_MANAGER")
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .requestMatchers("/delivery/**").hasRole("DELIVERY_PARTNER")
                         .anyRequest().authenticated())

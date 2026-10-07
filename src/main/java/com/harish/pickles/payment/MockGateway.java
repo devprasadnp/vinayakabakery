@@ -7,7 +7,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.stereotype.Component;
 
 /**
@@ -16,7 +15,6 @@ import org.springframework.stereotype.Component;
  * ({@code /mock-gateway/{merchantOrderId}}) offering "pay" and "fail" buttons.
  */
 @Component
-@ConditionalOnExpression("'${payments.mode:QR}' == 'PHONEPE' and ${payments.phonepe.mock:true} == true")
 public class MockGateway implements PaymentGateway {
 
     private static final Logger log = LoggerFactory.getLogger(MockGateway.class);

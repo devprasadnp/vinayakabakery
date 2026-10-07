@@ -104,11 +104,99 @@
                    th:href="|https://www.google.com/maps?q=${order.shippingAddress.latitude},${order.shippingAddress.longitude}|"
                    target="_blank" rel="noopener" class="small">View dropped pin on map →</a>
                 <p class="muted small mt-4 mb-0" th:if="${order.notes != null}" th:text="|Note: ${order.notes}|"></p>
+                <p class="muted small mb-0" th:if="${order.distanceKm != null}"
+                   th:text="|Distance from our store: ${order.distanceKm} km|"></p>
+            </div>
+
+            <div class="panel" id="orderMapPanel"
+                 th:if="${order.shippingAddress.hasPin() and googleMapsApiKey != null and !#strings.isEmpty(googleMapsApiKey)}"
+                 th:attr="data-lat=${order.shippingAddress.latitude},data-lng=${order.shippingAddress.longitude},data-store-lat=${storeLocation.hasPin() ? storeLocation.latitude : ''},data-store-lng=${storeLocation.hasPin() ? storeLocation.longitude : ''}">
+                <h3 class="mt-0">Delivery map</h3>
+                <div id="orderMap" class="map-frame lg"></div>
+                <p class="small muted mb-0">
+                    <span style="color:#d93025">&#9679;</span> Your delivery pin
+                    <span th:if="${storeLocation.hasPin()}"> &nbsp; <span style="color:#1a73e8">&#9679;</span> Our store</span>
+                    <span th:if="${order.distanceKm != null}" th:text="| &nbsp; Distance: ${order.distanceKm} km|"></span>
+                </p>
+            </div>
+
+            <div class="panel" id="trackPanel" th:if="${order.status.name() == 'SHIPPED'}"
+                 th:attr="data-url=@{'/orders/' + ${order.orderNumber} + '/tracking'},data-dest-lat=${order.shippingAddress.latitude},data-dest-lng=${order.shippingAddress.longitude}">
+                <h3 class="mt-0">Live delivery tracking</h3>
+                <p class="small mb-0" id="trackStatus">Your order is out for delivery. Waiting for the courier's location…</p>
+                <div id="trackMap" class="map-frame lg" style="display:none"></div>
+                <a id="trackLink" class="small" target="_blank" rel="noopener" style="display:none">Open courier location in Google Maps →</a>
             </div>
         </div>
     </div>
 </div>
 
 <footer th:replace="~{fragments/layout :: footer}"></footer>
+
+<script th:if="${(order.status.name() == 'SHIPPED' or order.shippingAddress.hasPin()) and googleMapsApiKey != null and !#strings.isEmpty(googleMapsApiKey)}"
+        th:src="@{'https://maps.googleapis.com/maps/api/js'(key=${googleMapsApiKey})}"></script>
+<script th:if="${order.shippingAddress.hasPin() and googleMapsApiKey != null and !#strings.isEmpty(googleMapsApiKey)}">
+    // Shows the customer's delivery pin and the store on a map, with a line between them.
+    (function () {
+        var p = document.getElementById('orderMapPanel');
+        if (!p || typeof google === 'undefined') { return; }
+        var dest = { lat: parseFloat(p.dataset.lat), lng: parseFloat(p.dataset.lng) };
+        var map = new google.maps.Map(document.getElementById('orderMap'), { center: dest, zoom: 14 });
+        new google.maps.Marker({ position: dest, map: map, title: 'Delivery pin' });
+        var sLat = parseFloat(p.dataset.storeLat), sLng = parseFloat(p.dataset.storeLng);
+        if (!isNaN(sLat) && !isNaN(sLng)) {
+            var store = { lat: sLat, lng: sLng };
+            new google.maps.Marker({ position: store, map: map, title: 'Our store',
+                icon: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png' });
+            new google.maps.Polyline({ path: [store, dest], map: map, strokeColor: '#1a73e8', strokeOpacity: 0.7, strokeWeight: 3 });
+            var b = new google.maps.LatLngBounds(); b.extend(store); b.extend(dest);
+            map.fitBounds(b, 40);
+        }
+    })();
+</script>
+<script th:if="${order.status.name() == 'SHIPPED'}">
+    // Polls the courier's last reported position every 10s and moves a marker on the map (or, with
+    // no Google Maps key, offers a link). The courier's phone shares its location automatically.
+    (function () {
+        var panel = document.getElementById('trackPanel');
+        if (!panel) { return; }
+        var status = document.getElementById('trackStatus');
+        var mapEl = document.getElementById('trackMap');
+        var link = document.getElementById('trackLink');
+        var map = null, marker = null;
+
+        function render(t) {
+            if (t.status !== 'SHIPPED') { location.reload(); return; }
+            if (!t.live) { return; }
+            var when = t.updatedAt ? new Date(t.updatedAt) : null;
+            status.textContent = (t.partnerName || 'Your courier') + ' is on the way'
+                + (when ? ' · updated ' + when.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '');
+            link.href = 'https://www.google.com/maps?q=' + t.latitude + ',' + t.longitude;
+            link.style.display = 'inline-block';
+            if (typeof google !== 'undefined') {
+                var pos = { lat: t.latitude, lng: t.longitude };
+                mapEl.style.display = 'block';
+                if (!map) {
+                    map = new google.maps.Map(mapEl, { center: pos, zoom: 15 });
+                    marker = new google.maps.Marker({ position: pos, map: map, title: 'Courier' });
+                    var dLat = parseFloat(panel.dataset.destLat), dLng = parseFloat(panel.dataset.destLng);
+                    if (!isNaN(dLat) && !isNaN(dLng)) {
+                        new google.maps.Marker({ position: { lat: dLat, lng: dLng }, map: map, title: 'You',
+                            icon: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png' });
+                    }
+                } else {
+                    marker.setPosition(pos);
+                    map.panTo(pos);
+                }
+            }
+        }
+        function poll() {
+            fetch(panel.dataset.url, { headers: { Accept: 'application/json' }, credentials: 'same-origin' })
+                .then(function (r) { return r.json(); }).then(render).catch(function () {});
+        }
+        poll();
+        setInterval(poll, 10000);
+    })();
+</script>
 </body>
 </html>

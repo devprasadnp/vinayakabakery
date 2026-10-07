@@ -64,7 +64,8 @@ public class UserAdminService {
             return true;
         }
         return actor.getRole() == Role.ADMIN
-                && (target.getRole() == Role.USER || target.getRole() == Role.DELIVERY_PARTNER);
+                && (target.getRole() == Role.USER || target.getRole() == Role.DELIVERY_PARTNER
+                || target.getRole() == Role.STORE_MANAGER);
     }
 
     /** Edit details or block sign-in: any account for a super admin, delivery partners only for an admin. */
@@ -72,7 +73,8 @@ public class UserAdminService {
         if (actor.getRole() == Role.SUPER_ADMIN) {
             return true;
         }
-        return actor.getRole() == Role.ADMIN && target.getRole() == Role.DELIVERY_PARTNER;
+        return actor.getRole() == Role.ADMIN
+                && (target.getRole() == Role.DELIVERY_PARTNER || target.getRole() == Role.STORE_MANAGER);
     }
 
     private static void require(boolean allowed, String what) {
@@ -127,6 +129,16 @@ public class UserAdminService {
                 "create delivery partners");
         User saved = create(form, Role.DELIVERY_PARTNER);
         log.info("{} created delivery partner {}", actingAs.getEmail(), saved.getEmail());
+        return saved;
+    }
+
+    /** Creates a store manager: runs inventory and orders, nothing else. Admin or super admin only. */
+    @Transactional
+    public User createStoreManager(UserForm form, User actingAs) {
+        require(actingAs.getRole() == Role.ADMIN || actingAs.getRole() == Role.SUPER_ADMIN,
+                "create store managers");
+        User saved = create(form, Role.STORE_MANAGER);
+        log.info("{} created store manager {}", actingAs.getEmail(), saved.getEmail());
         return saved;
     }
 

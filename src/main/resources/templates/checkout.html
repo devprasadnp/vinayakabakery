@@ -24,8 +24,8 @@
                 </div>
                 <div class="field">
                     <label for="contactPhone">Mobile number</label>
-                    <input id="contactPhone" name="contactPhone" required pattern="[6-9][0-9]{9}"
-                           inputmode="numeric" autocomplete="tel" placeholder="10 digits"
+                    <input id="contactPhone" name="contactPhone" required pattern="(\+?91[ \-]?|0)?[6-9][0-9]{4}[ \-]?[0-9]{5}"
+                           inputmode="tel" autocomplete="tel" placeholder="10 digits (+91 optional)"
                            th:value="${currentUser != null} ? ${currentUser.phone} : ''">
                     <div class="hint">We send delivery updates here.</div>
                 </div>
@@ -44,7 +44,7 @@
             </div>
 
             <div class="field">
-                <label for="addressLine2">Landmark <span class="muted">(optional)</span></label>
+                <label for="addressLine2">Nearest landmark / location <span class="muted">(optional)</span></label>
                 <input id="addressLine2" name="addressLine2" autocomplete="address-line2">
             </div>
 
@@ -68,9 +68,12 @@
 
             <div class="field" id="deliveryMapField" th:if="${googleMapsApiKey != null and !#strings.isEmpty(googleMapsApiKey)}"
                  th:attr="data-store-lat=${storeLocation.hasPin() ? storeLocation.latitude : 20.5937},data-store-lng=${storeLocation.hasPin() ? storeLocation.longitude : 78.9629}">
-                <label>Drop a pin at your delivery location <span class="muted">(optional - helps our delivery partner find you)</span></label>
+                <label>Pin your delivery location <span class="muted">(required - our delivery partner follows this pin)</span></label>
+                <input type="search" id="mapSearch" placeholder="Search your street, area or landmark" autocomplete="off">
                 <div id="deliveryMap" class="map-frame lg"></div>
-                <p class="map-pin-hint">Drag the pin, or click the map, to set your exact location.</p>
+                <p class="map-pin-hint">Drag the pin, or click the map, to set your exact location.
+                    <button class="btn ghost sm" type="button" id="useMyLocation">Use my current location</button></p>
+                <p class="hint" id="pinStatus" role="status" aria-live="polite"></p>
                 <input type="hidden" id="latitude" name="latitude">
                 <input type="hidden" id="longitude" name="longitude">
             </div>
@@ -105,15 +108,16 @@
                         <span th:text="|${line.name} × ${line.quantity}|">Food</span>
                         <span th:text="'₹' + ${line.lineTotal}">₹0</span>
                     </li>
-                    <li th:classappend="${cart.freeShippingApplied} ? 'free' : ''">
-                        <span>Shipping</span>
-                        <span th:text="${cart.freeShippingApplied} ? 'Free' : '₹' + ${cart.shipping}">₹0</span>
+                    <li id="shippingRow" th:classappend="${cart.freeShippingApplied} ? 'free' : ''"
+                        th:attr="data-subtotal=${cart.subtotal},data-discount=${appliedCoupon != null ? couponDiscount : 0}">
+                        <span>Shipping <small class="muted" id="shippingDistance"></small></span>
+                        <span id="shippingAmount" th:text="${cart.freeShippingApplied} ? 'Free' : '₹' + ${cart.shipping}">₹0</span>
                     </li>
                     <li th:if="${appliedCoupon != null}">
                         <span th:text="|Coupon (${appliedCoupon})|">Coupon</span>
                         <span th:text="'−₹' + ${couponDiscount}">−₹0</span></li>
                     <li class="grand"><span>Total</span>
-                        <span th:text="'₹' + (${appliedCoupon != null} ? (${cart.total} - ${couponDiscount}) : ${cart.total})">₹0</span></li>
+                        <span id="grandTotal" th:text="'₹' + (${appliedCoupon != null} ? (${cart.total} - ${couponDiscount}) : ${cart.total})">₹0</span></li>
                 </ul>
 
                 <form th:if="${appliedCoupon != null}" th:action="@{/cart/coupon/remove}" method="post" class="mt-4">
@@ -196,6 +200,16 @@
     })();
 </script>
 
+<script th:if="${googleMapsApiKey != null and !#strings.isEmpty(googleMapsApiKey)}">
+    // Google calls this when the key is rejected (wrong referrer, API not enabled, billing off).
+    window.gm_authFailure = function () {
+        var s = document.getElementById('pinStatus');
+        if (s) {
+            s.textContent = 'The map could not load (Google rejected the API key). Please tell the store, or try again later.';
+            s.className = 'hint bad';
+        }
+    };
+</script>
 <script th:if="${googleMapsApiKey != null and !#strings.isEmpty(googleMapsApiKey)}"
         th:src="@{'https://maps.googleapis.com/maps/api/js'(key=${googleMapsApiKey})}"></script>
 <script th:if="${googleMapsApiKey != null and !#strings.isEmpty(googleMapsApiKey)}">
@@ -210,10 +224,95 @@
         var latInput = document.getElementById('latitude');
         var lngInput = document.getElementById('longitude');
 
-        function setFromPosition(pos) {
-            latInput.value = pos.lat();
-            lngInput.value = pos.lng();
+        var geocoder = new google.maps.Geocoder();
+        var pinStatus = document.getElementById('pinStatus');
+        var pincodeInput = document.getElementById('pincode');
+        var cityInput = document.getElementById('city');
+        var stateInput = document.getElementById('state');
+        var pinCodes = [];
+
+        // Compares the PIN code typed in the form with the PIN code(s) at the dropped pin.
+        function compare() {
+            if (!pinCodes.length) { return; }
+            var typed = pincodeInput.value.trim();
+            if (typed && pinCodes.indexOf(typed) < 0) {
+                pinStatus.textContent = 'Your pin is in PIN code ' + pinCodes.join(' / ')
+                    + ', but the form says ' + typed + '. Move the pin or correct the PIN code.';
+                pinStatus.className = 'hint bad';
+            } else if (typed) {
+                pinStatus.textContent = 'PIN code matches your pin ✓';
+                pinStatus.className = 'hint ok';
+            }
         }
+        pincodeInput.addEventListener('input', compare);
+
+        // Reads the address at the pin: fills blank City / State / PIN and flags a PIN code that disagrees.
+        function describePin(latLng) {
+            geocoder.geocode({ location: latLng }, function (results, status) {
+                if (status !== 'OK' || !results || !results.length) { return; }
+                pinCodes = [];
+                var city = '', state = '';
+                results.forEach(function (r) {
+                    r.address_components.forEach(function (c) {
+                        if (c.types.indexOf('postal_code') >= 0) {
+                            var code = c.long_name.replace(/\s/g, '');
+                            if (pinCodes.indexOf(code) < 0) { pinCodes.push(code); }
+                        }
+                        if (!city && c.types.indexOf('locality') >= 0) { city = c.long_name; }
+                        if (!state && c.types.indexOf('administrative_area_level_1') >= 0) { state = c.long_name; }
+                    });
+                });
+                if (!cityInput.value && city) { cityInput.value = city; }
+                if (!stateInput.value && state) { stateInput.value = state; }
+                if (!pincodeInput.value && pinCodes.length) {
+                    pincodeInput.value = pinCodes[0];
+                    pincodeInput.dispatchEvent(new Event('input'));
+                }
+                pinStatus.textContent = 'Pin location: ' + results[0].formatted_address;
+                pinStatus.className = 'hint';
+                compare();
+            });
+        }
+
+        function setFromPosition(pos) {
+            latInput.value = pos.lat().toFixed(6);
+            lngInput.value = pos.lng().toFixed(6);
+            describePin(pos);
+        }
+
+        // Search box: jump the map and pin to the place the customer typed.
+        var search = document.getElementById('mapSearch');
+        search.addEventListener('keydown', function (e) {
+            if (e.key !== 'Enter') { return; }
+            e.preventDefault();
+            geocoder.geocode({ address: search.value, componentRestrictions: { country: 'IN' } }, function (res, st) {
+                if (st !== 'OK' || !res.length) { pinStatus.textContent = 'We could not find that place.'; pinStatus.className = 'hint bad'; return; }
+                var loc = res[0].geometry.location;
+                marker.setPosition(loc);
+                map.setCenter(loc);
+                map.setZoom(17);
+                setFromPosition(loc);
+            });
+        });
+
+        // The pin is required: without it the delivery partner has nothing to follow.
+        document.getElementById('checkoutForm').addEventListener('submit', function (e) {
+            if (!latInput.value || !lngInput.value) {
+                e.preventDefault();
+                pinStatus.textContent = 'Please drop a pin on the map (or use your current location) before placing the order.';
+                pinStatus.className = 'hint bad';
+                document.getElementById('deliveryMap').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        });
+        document.getElementById('useMyLocation').addEventListener('click', function () {
+            if (!navigator.geolocation) { return; }
+            navigator.geolocation.getCurrentPosition(function (p) {
+                var ll = new google.maps.LatLng(p.coords.latitude, p.coords.longitude);
+                marker.setPosition(ll);
+                map.setCenter(ll);
+                setFromPosition(ll);
+            });
+        });
         marker.addListener('dragend', function () { setFromPosition(marker.getPosition()); });
         map.addListener('click', function (e) { marker.setPosition(e.latLng); setFromPosition(e.latLng); });
     })();

@@ -40,15 +40,61 @@ public class OrderService {
     private final CartService cartService;
     private final DeliveryZoneService deliveryZoneService;
     private final UserRepository userRepository;
+    private final DistanceService distanceService;
+    private final DeliveryPricingService pricingService;
+    private final DeliveryPinValidator pinValidator;
+
+    /** What the customer's tracking map shows: the courier's last position while the order is out. */
+    public record Tracking(String status, boolean live, Double latitude, Double longitude,
+                           LocalDateTime updatedAt, String partnerName, Double distanceKm) {
+    }
 
     public OrderService(OrderRepository orderRepository, ProductRepository productRepository,
                         CartService cartService, DeliveryZoneService deliveryZoneService,
-                        UserRepository userRepository) {
+                        UserRepository userRepository, DistanceService distanceService,
+                        DeliveryPricingService pricingService, DeliveryPinValidator pinValidator) {
         this.orderRepository = orderRepository;
         this.productRepository = productRepository;
         this.cartService = cartService;
         this.deliveryZoneService = deliveryZoneService;
         this.userRepository = userRepository;
+        this.distanceService = distanceService;
+        this.pricingService = pricingService;
+        this.pinValidator = pinValidator;
+    }
+
+    /**
+     * The courier's browser reports its position while an order is out for delivery. Only the
+     * assigned partner, and only while the order is SHIPPED - never a stray ping after delivery.
+     */
+    @Transactional
+    public void updatePartnerLocation(String orderNumber, User partner, double lat, double lng) {
+        if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+            throw new BusinessException("Invalid coordinates");
+        }
+        Order order = getByOrderNumber(orderNumber);
+        if (order.isArchived() || order.getDeliveryPartner() == null
+                || !order.getDeliveryPartner().getId().equals(partner.getId())) {
+            throw NotFoundException.of("Order", orderNumber);
+        }
+        if (order.getStatus() != OrderStatus.SHIPPED) {
+            throw new BusinessException(orderNumber + " is not out for delivery");
+        }
+        order.setPartnerLatitude(lat);
+        order.setPartnerLongitude(lng);
+        order.setPartnerLocationAt(LocalDateTime.now());
+        orderRepository.save(order);
+    }
+
+    /** Tracking for the customer's own order (or staff). Position only while the order is SHIPPED. */
+    @Transactional(readOnly = true)
+    public Tracking trackingFor(String orderNumber, User user) {
+        Order order = getForUser(orderNumber, user);
+        boolean live = order.getStatus() == OrderStatus.SHIPPED && order.getPartnerLatitude() != null;
+        String partner = order.getDeliveryPartner() == null ? null : order.getDeliveryPartner().getFullName();
+        return new Tracking(order.getStatus().name(), live,
+                live ? order.getPartnerLatitude() : null, live ? order.getPartnerLongitude() : null,
+                live ? order.getPartnerLocationAt() : null, partner, order.getDistanceKm());
     }
 
     /**
@@ -70,7 +116,9 @@ public class OrderService {
         order.setOrderNumber(nextOrderNumber());
         order.setUser(user);
         order.setStatus(OrderStatus.CREATED);
-        order.setShippingAddress(toAddress(request.address()));
+        ShippingAddress address = toAddress(request.address());
+        address.setPinAddress(truncate(pinValidator.validate(request.address()), 300));
+        order.setShippingAddress(address);
         order.setNotes(request.notes());
 
         for (CartItem line : cart) {
@@ -88,6 +136,9 @@ public class OrderService {
             order.addItem(OrderItem.of(order, product, line.getQuantity()));
         }
 
+        Double distanceKm = distanceService.distanceKm(request.address().latitude(), request.address().longitude())
+                .orElse(null);
+        order.setDistanceKm(distanceKm);
         order.recalculateTotals(cartService.shippingFor(
                 order.getItems().stream().mapToLong(OrderItem::getLineTotalPaise).sum()));
         order.setPlacedAt(LocalDateTime.now());
@@ -333,10 +384,31 @@ public class OrderService {
 
     // --------------------------------------------------------------- helpers
 
+    private static String truncate(String value, int max) {
+        return value == null || value.length() <= max ? value : value.substring(0, max);
+    }
+
+    /**
+     * Customers may type "+91 98765 43210", "91-9876543210" or "09876543210"; the order stores only the
+     * 10-digit mobile number.
+     */
+    static String normalizePhone(String raw) {
+        String digits = raw == null ? "" : raw.replaceAll("[^0-9]", "");
+        if (digits.length() == 12 && digits.startsWith("91")) {
+            digits = digits.substring(2);
+        } else if (digits.length() == 11 && digits.startsWith("0")) {
+            digits = digits.substring(1);
+        }
+        if (!digits.matches("[6-9][0-9]{9}")) {
+            throw new BusinessException("Enter a valid 10 digit Indian mobile number (with or without +91)");
+        }
+        return digits;
+    }
+
     private ShippingAddress toAddress(AddressRequest a) {
-        return new ShippingAddress(a.contactName(), a.contactEmail(), a.contactPhone(),
+        return new ShippingAddress(a.contactName(), a.contactEmail(), normalizePhone(a.contactPhone()),
                 a.addressLine1(), a.addressLine2(), a.city(), a.state(),
-                a.pincode() == null ? null : a.pincode().trim(), a.latitude(), a.longitude());
+                a.pincode() == null ? null : a.pincode().trim(), a.latitude(), a.longitude(), null);
     }
 
     /**

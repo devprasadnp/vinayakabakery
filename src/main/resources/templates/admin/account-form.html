@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{fragments/panel :: head(${account == null} ? (${kind == 'partner'} ? 'Add a delivery partner' : 'Add a customer') : 'Manage account')}"></head>
+<head th:replace="~{fragments/panel :: head(${account == null} ? (${kind == 'partner'} ? 'Add a delivery partner' : (${kind == 'manager'} ? 'Add a store manager' : 'Add a customer')) : 'Manage account')}"></head>
 <body>
 <div class="shell">
     <aside th:replace="~{fragments/panel :: sidebar(${activePage})}"></aside>
@@ -8,7 +8,7 @@
     <main class="work">
         <div class="topbar">
             <div>
-                <h1 th:text="${account == null} ? (${kind == 'partner'} ? 'Add a delivery partner' : 'Add a customer') : ${account.fullName}">Add</h1>
+                <h1 th:text="${account == null} ? (${kind == 'partner'} ? 'Add a delivery partner' : (${kind == 'manager'} ? 'Add a store manager' : 'Add a customer')) : ${account.fullName}">Add</h1>
                 <div class="crumb" th:text="${account == null}
                      ? 'They can sign in as soon as you save'
                      : (${canEditDetails} ? 'Update details, reset the password, or block sign-in' : 'Reset the password')">Details</div>
@@ -23,7 +23,7 @@
             <div class="split" th:if="${account == null}">
                 <form class="panel" th:action="@{${basePath}}" method="post">
                     <div class="panel-head">
-                        <h3 th:text="${kind == 'partner'} ? 'New delivery partner' : 'New customer'">New account</h3>
+                        <h3 th:text="${kind == 'partner'} ? 'New delivery partner' : (${kind == 'manager'} ? 'New store manager' : 'New customer')">New account</h3>
                     </div>
 
                     <div class="field">
@@ -67,7 +67,11 @@
                         normal sign-in page and lands on <strong>My deliveries</strong>. They see only the orders you
                         hand to them, and can mark those picked up or delivered. Add as many partners as you need —
                         just come back here for the next one. No email is sent, so share the password yourself.</p>
-                    <p class="small muted" th:unless="${kind == 'partner'}">Creates a customer who can sign in, build a
+                    <p class="small muted" th:if="${kind == 'manager'}">Creates a store manager who signs in at the normal sign-in
+                        page and lands on the admin panel. They can manage foods, categories and orders (accept, pack,
+                        confirm payment, hand to a delivery partner) and place orders through the storefront. They
+                        cannot change any configuration, coupons or accounts. No email is sent, so share the password yourself.</p>
+                    <p class="small muted" th:if="${kind != 'partner' and kind != 'manager'}">Creates a customer who can sign in, build a
                         cart and check out exactly like someone who registered themselves. No email is sent, so share
                         the password yourself.</p>
                     <p class="small muted mb-0">Admin accounts are not created here on purpose.</p>

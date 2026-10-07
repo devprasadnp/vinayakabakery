@@ -20,12 +20,14 @@ public class CartService {
     private final CartItemRepository cartItemRepository;
     private final ProductService productService;
     private final AppProperties appProperties;
+    private final DeliveryPricingService pricingService;
 
     public CartService(CartItemRepository cartItemRepository, ProductService productService,
-                       AppProperties appProperties) {
+                       AppProperties appProperties, DeliveryPricingService pricingService) {
         this.cartItemRepository = cartItemRepository;
         this.productService = productService;
         this.appProperties = appProperties;
+        this.pricingService = pricingService;
     }
 
     @Transactional(readOnly = true)
@@ -106,13 +108,13 @@ public class CartService {
                 subtotal > 0 && shipping == 0);
     }
 
-    /** Flat courier fee, waived once the basket crosses the free-shipping threshold. */
+    /** Default-location courier fee (no pin yet), waived once the basket crosses the free-shipping threshold. */
     public long shippingFor(long subtotalPaise) {
-        if (subtotalPaise <= 0) {
-            return 0;
-        }
-        return subtotalPaise >= appProperties.getShipping().getFreeAbovePaise()
-                ? 0
-                : appProperties.getShipping().getFlatFeePaise();
+        return pricingService.shippingFor(subtotalPaise, null);
+    }
+
+    /** Courier fee for a delivery {@code distanceKm} from the store; see {@link DeliveryPricingService}. */
+    public long shippingFor(long subtotalPaise, Double distanceKm) {
+        return pricingService.shippingFor(subtotalPaise, distanceKm);
     }
 }

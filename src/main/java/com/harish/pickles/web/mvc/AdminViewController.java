@@ -38,7 +38,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 @RequestMapping("/admin")
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN', 'STORE_MANAGER')")
 public class AdminViewController {
 
     private final ProductService productService;
@@ -256,6 +256,7 @@ public class AdminViewController {
 
     // --------------------------------------------------------------- coupons
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/coupons")
     public String coupons(@RequestParam(required = false) String q,
                           @RequestParam(defaultValue = "0") int page, Model model) {
@@ -265,6 +266,7 @@ public class AdminViewController {
         return "admin/coupons";
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/coupons/new")
     public String newCoupon(Model model) {
         model.addAttribute("coupon", null);
@@ -273,6 +275,7 @@ public class AdminViewController {
         return "admin/coupon-form";
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/coupons/{id}/edit")
     public String editCoupon(@PathVariable Long id, Model model) {
         model.addAttribute("coupon", couponService.getById(id));
@@ -281,6 +284,7 @@ public class AdminViewController {
         return "admin/coupon-form";
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/coupons")
     public String saveCoupon(@RequestParam(required = false) Long id,
                              @RequestParam String code,
@@ -309,6 +313,7 @@ public class AdminViewController {
         }
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/coupons/{id}/toggle")
     public String toggleCoupon(@PathVariable Long id, @RequestParam boolean active, RedirectAttributes flash) {
         var coupon = couponService.setActive(id, active);

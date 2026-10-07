@@ -36,7 +36,7 @@ public class PaymentProperties {
     private String payeeName = "";
 
     /** Path under /static to the QR image. */
-    private String qrImage = "/images/payment-qr.jpg";
+    private String qrImage = "/images/payment-qr.png";
 
     /** What customers are told about how long manual confirmation takes. */
     private int confirmationHours = 24;

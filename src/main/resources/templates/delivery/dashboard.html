@@ -37,11 +37,19 @@
             <div>
                 <strong>Deliver to</strong><br>
                 <span th:text="${o.shippingAddress.singleLine}">Address</span>
+                <div class="small muted" th:if="${o.shippingAddress.pinAddress != null}"
+                     th:text="|Pin location: ${o.shippingAddress.pinAddress}|">Pin address</div>
                 <a th:if="${o.shippingAddress.hasPin()}"
                    th:href="|https://www.google.com/maps/dir/?api=1&destination=${o.shippingAddress.latitude},${o.shippingAddress.longitude}|"
                    target="_blank" rel="noopener" class="small" style="display:inline-block;margin-left:6px">Navigate →</a>
+                <div class="small muted" th:if="${o.distanceKm != null}"
+                     th:text="|Distance from store: ${o.distanceKm} km|">Distance</div>
             </div>
         </div>
+
+        <iframe th:if="${o.shippingAddress.hasPin() and googleMapsApiKey != null and !#strings.isEmpty(googleMapsApiKey)}"
+                class="map-frame" style="width:100%;border:0;margin-top:12px" loading="lazy" referrerpolicy="no-referrer-when-downgrade"
+                th:src="|https://www.google.com/maps/embed/v1/place?key=${googleMapsApiKey}&q=${o.shippingAddress.latitude},${o.shippingAddress.longitude}|"></iframe>
 
         <p class="small mt-4 mb-0">
             <strong>Carrying:</strong>
@@ -90,5 +98,40 @@
 </div>
 
 <footer th:replace="~{fragments/layout :: footer}"></footer>
+
+<!-- Live tracking is on by default: while any of my orders is out for delivery this page reports the
+     phone's position so the customer can follow along. Keep this tab open while on the road. -->
+<div id="trackingConfig" hidden th:attr="data-csrf=${_csrf.token},data-header=${_csrf.headerName}">
+    <span th:each="o : ${active}" th:if="${o.status.name() == 'SHIPPED'}" class="shipped-order"
+          th:attr="data-url=@{'/delivery/orders/' + ${o.orderNumber} + '/location'}"></span>
+</div>
+<script>
+    (function () {
+        var cfg = document.getElementById('trackingConfig');
+        var orders = cfg.querySelectorAll('.shipped-order');
+        if (!orders.length || !navigator.geolocation) { return; }
+        var banner = document.createElement('div');
+        banner.className = 'notice info';
+        banner.textContent = 'Sharing your live location with the customer while orders are out for delivery. Allow location access and keep this page open.';
+        document.querySelector('.wrap.section').prepend(banner);
+
+        var last = 0;
+        navigator.geolocation.watchPosition(function (p) {
+            var now = Date.now();
+            if (now - last < 10000) { return; }
+            last = now;
+            var body = new URLSearchParams({ lat: p.coords.latitude, lng: p.coords.longitude });
+            var headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
+            headers[cfg.dataset.header] = cfg.dataset.csrf;
+            orders.forEach(function (o) {
+                fetch(o.dataset.url, { method: 'POST', headers: headers, body: body, credentials: 'same-origin' })
+                    .catch(function () {});
+            });
+        }, function () {
+            banner.className = 'notice bad';
+            banner.textContent = 'Location access is blocked, so the customer cannot track this delivery. Allow location for this site and reload.';
+        }, { enableHighAccuracy: true, maximumAge: 5000 });
+    })();
+</script>
 </body>
 </html>

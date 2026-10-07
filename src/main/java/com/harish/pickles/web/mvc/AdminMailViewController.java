@@ -23,7 +23,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
- * The one shared admin mailbox (admin@harifoods.in): inbox, sent mail, and compose. Every admin
+ * The one shared admin mailbox (admin@srivinayakabakeryhome.com): inbox, sent mail, and compose. Every admin
  * sees the whole mailbox; a super admin additionally gets a filter that narrows the list to
  * messages involving one registered user's email address - there's no separate per-user mailbox.
  */
@@ -95,22 +95,72 @@ public class AdminMailViewController {
         return "admin/mail-detail";
     }
 
+    /**
+     * Blank compose form, or one pre-filled to answer a message: {@code mode} is reply, replyall or forward
+     * ({@code uid}/{@code folder} name the original).
+     */
     @GetMapping("/compose")
-    public String composeForm(Model model) {
+    public String composeForm(@RequestParam(required = false) String mode,
+                              @RequestParam(required = false) Long uid,
+                              @RequestParam(defaultValue = "inbox") String folder, Model model) {
         model.addAttribute("activePage", "mail-compose");
+        model.addAttribute("composeMode", "new");
+        if (mode != null && uid != null) {
+            try {
+                MailMessageDetail m = mailInboxService.fetch(parseFolder(folder), uid);
+                boolean forward = "forward".equalsIgnoreCase(mode);
+                boolean all = "replyall".equalsIgnoreCase(mode);
+                String subject = m.subject() == null ? "" : m.subject();
+                model.addAttribute("quoted", "\n\n" + quote(m, forward));
+                if (forward) {
+                    model.addAttribute("subject", prefix("Fwd: ", subject));
+                } else {
+                    String[] who = mailInboxService.replyRecipients(m, all);
+                    model.addAttribute("to", who[0]);
+                    model.addAttribute("cc", who[1]);
+                    model.addAttribute("subject", prefix("Re: ", subject));
+                    model.addAttribute("inReplyTo", m.messageId());
+                    model.addAttribute("references", m.references());
+                }
+                model.addAttribute("composeMode", forward ? "Forward" : all ? "Reply all" : "Reply");
+            } catch (MailAccessException ex) {
+                model.addAttribute("mailError", ex.getMessage());
+            }
+        }
         return "admin/mail-compose";
     }
 
     @PostMapping("/compose")
-    public String compose(@RequestParam String to, @RequestParam String subject,
-                          @RequestParam String body, RedirectAttributes flash) {
+    public String compose(@RequestParam String to, @RequestParam(required = false) String cc,
+                          @RequestParam(required = false) String bcc, @RequestParam String subject,
+                          @RequestParam String body, @RequestParam(required = false) String inReplyTo,
+                          @RequestParam(required = false) String references, RedirectAttributes flash) {
         try {
-            mailInboxService.sendMail(to, subject, body);
+            mailInboxService.sendMail(to, cc, bcc, subject, body, inReplyTo, references);
             flash.addFlashAttribute("message", "Email sent to " + to);
         } catch (MailAccessException ex) {
             flash.addFlashAttribute("error", ex.getMessage());
+            return "redirect:/admin/mail/compose";
         }
         return "redirect:/admin/mail?folder=sent";
+    }
+
+    private static String prefix(String p, String subject) {
+        String bare = p.trim();
+        return subject.regionMatches(true, 0, bare, 0, bare.length()) ? subject : p + subject;
+    }
+
+    /** The original message as quoted text under a reply, or a forwarded-message header block. */
+    private static String quote(MailMessageDetail m, boolean forward) {
+        String when = m.sentDate() == null ? "" : java.time.format.DateTimeFormatter
+                .ofPattern("dd MMM yyyy, HH:mm").withZone(java.time.ZoneId.systemDefault()).format(m.sentDate());
+        String text = m.bodyText() == null ? "" : m.bodyText();
+        if (forward) {
+            return "---------- Forwarded message ----------\nFrom: " + m.from() + "\nDate: " + when
+                    + "\nSubject: " + m.subject() + "\nTo: " + m.to() + "\n\n" + text;
+        }
+        return "On " + when + ", " + m.from() + " wrote:\n"
+                + text.lines().map(l -> "> " + l).collect(java.util.stream.Collectors.joining("\n"));
     }
 
     private MailFolder parseFolder(String folder) {

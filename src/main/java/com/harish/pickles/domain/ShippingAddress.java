@@ -56,9 +56,13 @@ public class ShippingAddress {
     @Column(name = "longitude")
     private Double longitude;
 
+    /** Google's readable address for the dropped pin, as a second reference for the delivery partner. */
+    @Column(name = "pin_address", length = 300)
+    private String pinAddress;
+
     public ShippingAddress(String contactName, String contactEmail, String contactPhone, String addressLine1,
                            String addressLine2, String city, String state, String pincode) {
-        this(contactName, contactEmail, contactPhone, addressLine1, addressLine2, city, state, pincode, null, null);
+        this(contactName, contactEmail, contactPhone, addressLine1, addressLine2, city, state, pincode, null, null, null);
     }
 
     public boolean hasPin() {

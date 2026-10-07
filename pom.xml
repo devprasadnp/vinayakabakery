@@ -122,6 +122,13 @@
             <version>1.2.1</version>
         </dependency>
 
+        <!-- PhonePe Payment Gateway - official backend SDK (OAuth token handling, pay, order status, callbacks) -->
+        <dependency>
+            <groupId>com.phonepe</groupId>
+            <artifactId>pg-sdk-java</artifactId>
+            <version>2.2.3</version>
+        </dependency>
+
         <!-- UPI QR code generation -->
         <dependency>
             <groupId>com.google.zxing</groupId>

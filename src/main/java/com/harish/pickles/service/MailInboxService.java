@@ -18,6 +18,10 @@ import jakarta.mail.Part;
 import jakarta.mail.Session;
 import jakarta.mail.Store;
 import jakarta.mail.UIDFolder;
+import jakarta.mail.internet.InternetAddress;
+import jakarta.mail.internet.MimeMessage;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -36,6 +40,8 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public class MailInboxService {
+
+    private static final Logger log = LoggerFactory.getLogger(MailInboxService.class);
 
     private final AppProperties props;
     private final MailImapConnectionProperties imapConnection;
@@ -95,29 +101,85 @@ public class MailInboxService {
         requireConfigured();
         try (Store store = connect()) {
             try (Folder mailFolder = store.getFolder(folderName(folder))) {
-                mailFolder.open(Folder.READ_ONLY);
+                // Read-write on the inbox so opening a message marks it as read.
+                mailFolder.open(folder == MailFolder.INBOX ? Folder.READ_WRITE : Folder.READ_ONLY);
                 UIDFolder uidFolder = (UIDFolder) mailFolder;
                 Message message = uidFolder.getMessageByUID(uid);
                 if (message == null) {
                     throw new MailAccessException("That message is no longer in the mailbox.");
                 }
-                String body;
+                String text;
+                String html;
                 try {
-                    body = extractBody(message);
+                    text = extractBody(message);
+                    html = extractHtml(message);
                 } catch (IOException ex) {
                     throw new MailAccessException("Could not read the message body.");
                 }
+                String[] id = message.getHeader("Message-ID");
+                String[] refs = message.getHeader("References");
                 return new MailMessageDetail(uid, addressesToString(message.getFrom()),
                         addressesToString(message.getRecipients(Message.RecipientType.TO)),
-                        message.getSubject(), toInstant(message.getSentDate()), body);
+                        addressesToString(message.getRecipients(Message.RecipientType.CC)),
+                        addressesToString(message.getReplyTo()),
+                        message.getSubject(), toInstant(message.getSentDate()), text, html,
+                        id == null || id.length == 0 ? null : id[0],
+                        refs == null || refs.length == 0 ? null : refs[0]);
             }
         } catch (MessagingException ex) {
             throw new MailAccessException("Mailbox is temporarily unreachable. Try again shortly.");
         }
     }
 
-    public void sendMail(String to, String subject, String body) {
-        mailService.sendNow(to, subject, body);
+    /** Sends from the admin mailbox, then files a copy in the Sent folder (SMTP does not do that itself). */
+    public void sendMail(String to, String cc, String bcc, String subject, String body,
+                         String inReplyTo, String references) {
+        MimeMessage sent = mailService.sendNow(to, cc, bcc, subject, body, inReplyTo, references);
+        if (!isConfigured()) {
+            return;
+        }
+        try (Store store = connect(); Folder sentFolder = store.getFolder(folderName(MailFolder.SENT))) {
+            if (!sentFolder.exists()) {
+                sentFolder.create(Folder.HOLDS_MESSAGES);
+            }
+            sentFolder.appendMessages(new Message[] {sent});
+        } catch (MessagingException | RuntimeException ex) {
+            log.warn("Mail was sent but could not be copied to the Sent folder: {}", ex.getMessage());
+        }
+    }
+
+    /**
+     * Who a reply goes to. Reply: the Reply-To (else From). Reply all: also everyone else on To and Cc,
+     * minus this mailbox and duplicates. Returns {to, cc}.
+     */
+    public String[] replyRecipients(MailMessageDetail m, boolean all) {
+        String self = mailService.fromAddress().toLowerCase(java.util.Locale.ROOT);
+        java.util.Set<String> seen = new java.util.LinkedHashSet<>();
+        seen.add(self);
+        List<String> to = new ArrayList<>();
+        List<String> cc = new ArrayList<>();
+        String primary = m.replyTo() != null && !m.replyTo().isBlank() ? m.replyTo() : m.from();
+        addAll(to, seen, primary);
+        if (all) {
+            addAll(cc, seen, m.to());
+            addAll(cc, seen, m.cc());
+        }
+        return new String[] {String.join(", ", to), String.join(", ", cc)};
+    }
+
+    private static void addAll(List<String> out, java.util.Set<String> seen, String header) {
+        if (header == null || header.isBlank()) {
+            return;
+        }
+        try {
+            for (InternetAddress a : InternetAddress.parse(header, false)) {
+                if (seen.add(a.getAddress().toLowerCase(java.util.Locale.ROOT))) {
+                    out.add(a.toString());
+                }
+            }
+        } catch (MessagingException ignored) {
+            // an unparseable header contributes no recipients
+        }
     }
 
     private void requireConfigured() {
@@ -196,5 +258,23 @@ public class MailInboxService {
         Object content = htmlPart.getContent();
         String html = content == null ? "" : content.toString();
         return html.replaceAll("<[^>]+>", " ").replaceAll("\\s+", " ").trim();
+    }
+
+    /** The message's HTML part (searching nested multiparts), or null when it has none. */
+    static String extractHtml(Part part) throws MessagingException, IOException {
+        if (part.isMimeType("text/html")) {
+            Object content = part.getContent();
+            return content == null ? null : content.toString();
+        }
+        if (part.isMimeType("multipart/*")) {
+            Multipart multipart = (Multipart) part.getContent();
+            for (int i = 0; i < multipart.getCount(); i++) {
+                String found = extractHtml(multipart.getBodyPart(i));
+                if (found != null && !found.isBlank()) {
+                    return found;
+                }
+            }
+        }
+        return null;
     }
 }

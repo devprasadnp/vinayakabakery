@@ -6,15 +6,15 @@
 # (SPRING_MAIL_PASSWORD=...) or in a real environment variable of the same name.
 # Startup fails with a clear "Could not resolve placeholder" if it is missing.
 #
-# Sri Vinayaka Bakery Home's mailbox (hello@srivinayakabakeryhome.com) is reached over the
+# Sri Vinayaka Bakery Home's mailbox (admin@srivinayakabakeryhome.com) is reached over the
 # *implicit TLS* ports (SMTPS 465 / IMAPS 993), not STARTTLS - the connection is encrypted
 # from the first byte, so mail.smtp.ssl.enable / mail.imap.ssl.enable replace starttls here.
 spring:
   mail:
     host: ${SPRING_MAIL_HOST:mail.srivinayakabakeryhome.com}
     port: ${SPRING_MAIL_PORT:465}
-    username: ${SPRING_MAIL_USERNAME:hello@srivinayakabakeryhome.com}
-    password: ${SPRING_MAIL_PASSWORD:%C@L$;Zq9m%Nv5HZ}
+    username: ${SPRING_MAIL_USERNAME:admin@srivinayakabakeryhome.com}
+    password: ${SPRING_MAIL_PASSWORD}
     properties:
       mail.smtp.auth: true
       mail.smtp.ssl.enable: true
@@ -29,13 +29,13 @@ spring:
       host: ${SPRING_MAIL_IMAP_HOST:mail.srivinayakabakeryhome.com}
       port: ${SPRING_MAIL_IMAP_PORT:993}
       ssl: ${SPRING_MAIL_IMAP_SSL:true}
-      username: ${SPRING_MAIL_USERNAME:hello@srivinayakabakeryhome.com}
-      password: ${SPRING_MAIL_PASSWORD:}
+      username: ${SPRING_MAIL_USERNAME:admin@srivinayakabakeryhome.com}
+      password: ${SPRING_MAIL_PASSWORD:PhJP7mS3PmmeCCB}
 
 app:
   mail:
     # Most SMTP servers only accept a From address that matches the logged-in mailbox.
-    from: ${MAIL_FROM:Sri Vinayaka Bakery Home <hello@srivinayakabakeryhome.com>}
+    from: ${MAIL_FROM:Sri Vinayaka Bakery Home <admin@srivinayakabakeryhome.com>}
     imap:
       enabled: ${MAIL_IMAP_ENABLED:true}
       # The sent-mail folder's name is server-specific ("Sent", "Sent Items", "INBOX.Sent" are

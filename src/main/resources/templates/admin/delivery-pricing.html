@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/panel :: head('Delivery pricing')}"></head>
+<body>
+<div class="shell">
+    <aside th:replace="~{fragments/panel :: sidebar('pricing')}"></aside>
+
+    <main class="work">
+        <div class="topbar">
+            <div>
+                <h1>Delivery pricing</h1>
+                <div class="crumb">Default delivery price, then a per-kilometre rate by distance from the store</div>
+            </div>
+        </div>
+
+        <div class="work-body">
+            <div th:replace="~{fragments/panel :: flash}"></div>
+
+            <div class="notice info" th:unless="${storeHasPin}">
+                <span class="ico">&#8505;</span>
+                <span>The store has no location pin yet, so distances cannot be measured and every order pays the
+                    default price. <a th:href="@{/admin/store-location}">Set the store location</a>.</span>
+            </div>
+
+            <form class="panel" th:action="@{/admin/delivery-pricing}" method="post">
+                <div class="field">
+                    <label><input type="checkbox" name="enabled" value="true" th:checked="${pricing.enabled}">
+                        Charge by distance (per kilometre beyond the default area)</label>
+                    <div class="hint">Off: every order pays the default delivery price below, as before.</div>
+                </div>
+
+                <div class="row-2">
+                    <div class="field">
+                        <label for="baseFee">Default delivery price (&#8377;)</label>
+                        <input id="baseFee" name="baseFee" type="number" step="0.01" min="0" required
+                               th:value="${baseFee}">
+                    </div>
+                    <div class="field">
+                        <label for="baseKm">Default price covers up to (km)</label>
+                        <input id="baseKm" name="baseKm" type="number" step="0.1" min="0" required
+                               th:value="${pricing.baseKm}">
+                    </div>
+                </div>
+
+                <div class="row-2">
+                    <div class="field">
+                        <label for="perKm">Price per extra kilometre (&#8377;)</label>
+                        <input id="perKm" name="perKm" type="number" step="0.01" min="0" required
+                               th:value="${perKm}">
+                        <div class="hint">Charged for every started km beyond the default area.</div>
+                    </div>
+                    <div class="field">
+                        <label for="maxKm">Maximum delivery distance (km) <span class="muted">(optional)</span></label>
+                        <input id="maxKm" name="maxKm" type="number" step="0.1" min="0.1" th:value="${pricing.maxKm}">
+                        <div class="hint">Pins further away cannot order. Blank = no limit.</div>
+                    </div>
+                </div>
+
+                <p class="muted small">Free-shipping orders stay free. Distance is the driving distance from the store
+                    to the customer's dropped pin (customers who drop no pin pay the default price).</p>
+
+                <div class="form-actions"><button class="btn" type="submit">Save</button></div>
+            </form>
+        </div>
+    </main>
+</div>
+</body>
+</html>

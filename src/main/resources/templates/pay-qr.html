@@ -20,6 +20,7 @@
             move on automatically once it's confirmed.
         </p>
 
+        <!-- Generated per order: scanning fills in payee, exact amount and the order number as the note. -->
         <img th:src="@{'/orders/' + ${order.orderNumber} + '/qr-code.png'}" alt="Scan this QR code to pay"
              style="max-width:280px; width:100%; margin:16px auto; display:block; border-radius:12px">
 
@@ -43,8 +44,8 @@
 
         <div class="notice bad" style="text-align:left">
             <span class="ico">&#9888;</span>
-            <span>This QR code already carries <strong th:text="${order.orderNumber}">HP-…</strong> as the
-                payment note, so it's prefilled once you scan. Please don't edit or remove it, so we can
+            <span>This QR code already carries the amount and <strong th:text="${order.orderNumber}">HP-…</strong>
+                as the payment note, so it's prefilled once you scan. Please don't edit or remove them, so we can
                 match your payment to this order.</span>
         </div>
 

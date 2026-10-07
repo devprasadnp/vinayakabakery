@@ -33,6 +33,7 @@ public class AdminAccountsViewController {
 
     private static final List<Role> CUSTOMER_ROLES = List.of(Role.USER);
     private static final List<Role> PARTNER_ROLES = List.of(Role.DELIVERY_PARTNER);
+    private static final List<Role> MANAGER_ROLES = List.of(Role.STORE_MANAGER);
     private static final List<Role> STAFF_ROLES = List.of(Role.ADMIN, Role.SUPER_ADMIN);
 
     private final UserAdminService userAdminService;
@@ -56,6 +57,13 @@ public class AdminAccountsViewController {
                                    @RequestParam(defaultValue = "0") int page, Model model) {
         return list(model, PARTNER_ROLES, q, page, "Delivery partners", "partners", "/admin/delivery-partners",
                 "/admin/delivery-partners/new", "Add a delivery partner");
+    }
+
+    @GetMapping("/store-managers")
+    public String storeManagers(@RequestParam(required = false) String q,
+                                @RequestParam(defaultValue = "0") int page, Model model) {
+        return list(model, MANAGER_ROLES, q, page, "Store managers", "managers", "/admin/store-managers",
+                "/admin/store-managers/new", "Add a store manager");
     }
 
     @GetMapping("/staff")
@@ -89,6 +97,31 @@ public class AdminAccountsViewController {
     @GetMapping("/delivery-partners/new")
     public String newDeliveryPartner(Model model) {
         return createForm(model, "partner", "/admin/delivery-partners", "partners");
+    }
+
+    @GetMapping("/store-managers/new")
+    public String newStoreManager(Model model) {
+        return createForm(model, "manager", "/admin/store-managers", "managers");
+    }
+
+    /** Store managers run inventory and orders; configuration stays with admins. */
+    @PostMapping("/store-managers")
+    public String createStoreManager(@RequestParam String fullName,
+                                     @RequestParam String email,
+                                     @RequestParam(required = false) String phone,
+                                     @RequestParam String password,
+                                     @RequestParam(defaultValue = "false") boolean enabled,
+                                     RedirectAttributes flash) {
+        try {
+            User created = userAdminService.createStoreManager(
+                    new UserForm(null, fullName, email, phone, password, enabled), CurrentUser.require());
+            flash.addFlashAttribute("message", created.getFullName()
+                    + " can now sign in as a store manager with " + created.getEmail());
+            return "redirect:/admin/store-managers";
+        } catch (BusinessException ex) {
+            flash.addFlashAttribute("error", ex.getMessage());
+            return "redirect:/admin/store-managers/new";
+        }
     }
 
     private String createForm(Model model, String kind, String basePath, String activePage) {
@@ -208,6 +241,7 @@ public class AdminAccountsViewController {
         return switch (role) {
             case USER -> "customers";
             case DELIVERY_PARTNER -> "partners";
+            case STORE_MANAGER -> "managers";
             default -> "staff";
         };
     }
@@ -216,6 +250,7 @@ public class AdminAccountsViewController {
         return switch (role) {
             case USER -> "/admin/customers";
             case DELIVERY_PARTNER -> "/admin/delivery-partners";
+            case STORE_MANAGER -> "/admin/store-managers";
             default -> "/admin/staff";
         };
     }

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/panel :: head('Payments')}"></head>
+<body>
+<div class="shell">
+    <aside th:replace="~{fragments/panel :: sidebar('payments')}"></aside>
+
+    <main class="work">
+        <div class="topbar">
+            <div>
+                <h1>Payments &middot; PhonePe</h1>
+                <div class="crumb">Gateway credentials and mode. Changes apply immediately, no restart.</div>
+            </div>
+        </div>
+
+        <div class="work-body">
+            <div th:replace="~{fragments/panel :: flash}"></div>
+
+            <div class="notice info">
+                <span class="ico">&#8505;</span>
+                <span>Checkout is currently using:
+                    <strong th:text="${phonepe.mode.name() == 'PHONEPE'} ? (${phonepe.mock} ? 'PhonePe (mock - no real money)' : 'PhonePe (live SDK, ' + ${phonepe.environment} + ')') : (${phonepe.mode.name() == 'QR'} ? 'Manual UPI QR' : ${phonepe.mode})">mode</strong>.
+                    Payment status is refreshed live through the PhonePe SDK: on the customer's return, while they wait,
+                    when PhonePe calls the webhook, and every minute in the background.</span>
+            </div>
+
+            <div class="split">
+                <form class="panel" th:action="@{/admin/payments}" method="post" autocomplete="off">
+                    <div class="field">
+                        <label><input type="checkbox" name="usePhonePe" value="true" th:checked="${phonepe.usePhonePe}">
+                            Use PhonePe at checkout</label>
+                        <div class="hint">Off: customers pay by scanning the store's UPI QR (confirmed by hand).</div>
+                    </div>
+                    <div class="field">
+                        <label><input type="checkbox" name="mock" value="true" th:checked="${phonepe.mock}">
+                            Mock mode (test checkout, no real money moves)</label>
+                        <div class="hint">Untick to take real payments through the PhonePe SDK.</div>
+                    </div>
+
+                    <div class="row-2">
+                        <div class="field">
+                            <label for="environment">Environment</label>
+                            <select id="environment" name="environment">
+                                <option th:each="e : ${environments}" th:value="${e}" th:text="${e}"
+                                        th:selected="${e == phonepe.environment}">SANDBOX</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label for="clientVersion">Client version</label>
+                            <input id="clientVersion" name="clientVersion" inputmode="numeric" maxlength="4"
+                                   th:value="${phonepe.clientVersion}">
+                        </div>
+                    </div>
+
+                    <div class="field">
+                        <label for="clientId">Client ID</label>
+                        <input id="clientId" name="clientId" maxlength="120" th:value="${phonepe.clientId}">
+                    </div>
+                    <div class="field">
+                        <label for="clientSecret">Client secret</label>
+                        <input id="clientSecret" name="clientSecret" type="password" maxlength="200"
+                               autocomplete="new-password"
+                               th:placeholder="${phonepe.secretSet} ? 'Saved - leave blank to keep it' : 'Paste the client secret'">
+                        <div class="hint">Stored encrypted. Never shown again after saving.</div>
+                    </div>
+
+                    <div class="field">
+                        <label for="redirectUrl">Redirect URL</label>
+                        <input id="redirectUrl" name="redirectUrl" maxlength="255" th:value="${phonepe.redirectUrl}"
+                               placeholder="https://yourdomain/payment/callback">
+                        <div class="hint">Where PhonePe sends the customer after paying. Use your site's
+                            <code>/payment/callback</code> URL.</div>
+                    </div>
+                    <div class="field">
+                        <label for="expireAfterSeconds">Order expiry (seconds, 300&ndash;3600)</label>
+                        <input id="expireAfterSeconds" name="expireAfterSeconds" type="number" min="300" max="3600"
+                               th:value="${phonepe.expireAfterSeconds}">
+                    </div>
+
+                    <h3>Webhook</h3>
+                    <div class="row-2">
+                        <div class="field">
+                            <label for="webhookUsername">Webhook username</label>
+                            <input id="webhookUsername" name="webhookUsername" maxlength="120"
+                                   th:value="${phonepe.webhookUsername}">
+                        </div>
+                        <div class="field">
+                            <label for="webhookPassword">Webhook password</label>
+                            <input id="webhookPassword" name="webhookPassword" type="password" maxlength="200"
+                                   autocomplete="new-password"
+                                   th:placeholder="${phonepe.webhookPasswordSet} ? 'Saved - leave blank to keep it' : 'Set a password'">
+                        </div>
+                    </div>
+                    <div class="hint">Enter the same username and password on the PhonePe dashboard's webhook screen.</div>
+
+                    <div class="form-actions">
+                        <button class="btn" type="submit">Save</button>
+                    </div>
+                </form>
+
+                <div>
+                    <div class="panel">
+                        <h3 class="mt-0">Webhook URL</h3>
+                        <p class="small">Add this URL on the PhonePe dashboard (Developer Settings &rarr; Webhook):</p>
+                        <p><code th:text="${webhookUrl}">https://…/api/payments/phonepe/webhook</code></p>
+                        <p class="small muted mb-0">It is only accepted with the username and password saved here.
+                            If your public address is different, set <code>APP_BASE_URL</code>.</p>
+                    </div>
+                    <div class="panel">
+                        <h3 class="mt-0">Check it works</h3>
+                        <form th:action="@{/admin/payments/test}" method="post">
+                            <button class="btn ghost block" type="submit">Test connection</button>
+                        </form>
+                        <p class="small muted">Asks PhonePe whether the <em>saved</em> credentials are accepted. Save first.</p>
+                        <form th:action="@{/admin/payments/refresh}" method="post">
+                            <button class="btn ghost block" type="submit">Refresh pending payments now</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+</body>
+</html>

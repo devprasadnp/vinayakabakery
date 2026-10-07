@@ -32,7 +32,8 @@ public class QrCodeService {
                 + "&pn=" + encode(paymentProperties.getPayeeName())
                 + "&am=" + encode(amountRupees.toPlainString())
                 + "&cu=INR"
-                + "&tn=" + encode(orderNumber);
+                + "&tn=" + encode(orderNumber)
+                + "&tr=" + encode(orderNumber);
     }
 
     /** Renders the given text as a PNG QR code. */

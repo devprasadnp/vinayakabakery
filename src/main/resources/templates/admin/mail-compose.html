@@ -2,37 +2,58 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/panel :: head('Compose mail')}"></head>
 <body>
+<style th:replace="~{admin/mail-inbox :: mailStyle}"></style>
 <div class="shell">
     <aside th:replace="~{fragments/panel :: sidebar('mail-compose')}"></aside>
 
     <main class="work">
         <div class="topbar">
             <div>
-                <h1>Compose mail</h1>
-                <div class="crumb">Sent from hello@srivinayakabakeryhome.com</div>
+                <h1 th:text="${composeMode == 'new'} ? 'New message' : ${composeMode}">New message</h1>
+                <div class="crumb">Sent from admin@srivinayakabakeryhome.com</div>
             </div>
             <a class="btn ghost" th:href="@{/admin/mail}">&larr; Back to mail</a>
         </div>
 
         <div class="work-body">
             <div th:replace="~{fragments/panel :: flash}"></div>
+            <div class="notice bad" th:if="${mailError}"><span class="ico">&#9888;</span><span th:text="${mailError}"></span></div>
 
-            <form class="card stack" th:action="@{/admin/mail/compose}" method="post" style="max-width:640px">
-                <div class="body stack">
-                    <label>To
-                        <input type="email" name="to" required placeholder="someone@example.com">
-                    </label>
-                    <label>Subject
-                        <input type="text" name="subject" required maxlength="200">
-                    </label>
-                    <label>Message
-                        <textarea name="body" rows="10" required></textarea>
-                    </label>
+            <form class="mail-card compose" th:action="@{/admin/mail/compose}" method="post">
+                <input type="hidden" name="inReplyTo" th:value="${inReplyTo}">
+                <input type="hidden" name="references" th:value="${references}">
+                <div class="row"><label for="to">To</label>
+                    <input id="to" name="to" required placeholder="name@example.com, another@example.com" th:value="${to}">
+                    <a href="#" class="small" id="showCc" th:if="${#strings.isEmpty(cc)}">Cc / Bcc</a></div>
+                <div class="row" id="ccRow" th:style="${#strings.isEmpty(cc)} ? 'display:none' : ''"><label for="cc">Cc</label>
+                    <input id="cc" name="cc" th:value="${cc}"></div>
+                <div class="row" id="bccRow" style="display:none"><label for="bcc">Bcc</label>
+                    <input id="bcc" name="bcc"></div>
+                <div class="row"><label for="subject">Subject</label>
+                    <input id="subject" name="subject" required maxlength="200" th:value="${subject}"></div>
+                <textarea name="body" required placeholder="Write your message..."
+                          th:text="${quoted}"></textarea>
+                <div class="bar">
                     <button class="btn" type="submit">Send</button>
+                    <a class="btn ghost" th:href="@{/admin/mail}">Discard</a>
+                    <span class="from">From: Sri Vinayaka Bakery Home &lt;admin@srivinayakabakeryhome.com&gt;</span>
                 </div>
             </form>
         </div>
     </main>
 </div>
+<script>
+    var cc = document.getElementById('showCc');
+    if (cc) {
+        cc.addEventListener('click', function (e) {
+            e.preventDefault();
+            document.getElementById('ccRow').style.display = 'flex';
+            document.getElementById('bccRow').style.display = 'flex';
+            this.style.display = 'none';
+        });
+    }
+    var t = document.querySelector('.compose textarea');
+    if (t && t.value.trim()) { t.focus(); t.setSelectionRange(0, 0); }
+</script>
 </body>
 </html>

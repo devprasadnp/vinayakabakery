@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/panel :: head('Google Maps')}"></head>
+<body>
+<div class="shell">
+    <aside th:replace="~{fragments/panel :: sidebar('google-maps')}"></aside>
+
+    <main class="work">
+        <div class="topbar">
+            <div>
+                <h1>Google Maps keys</h1>
+                <div class="crumb">Checkout pin map, distance pricing and address checks. Changes apply immediately.</div>
+            </div>
+        </div>
+
+        <div class="work-body">
+            <div th:replace="~{fragments/panel :: flash}"></div>
+
+            <div class="notice info" th:if="${maps.browserKey.isEmpty()}">
+                <span class="ico">&#8505;</span>
+                <span>No browser key is set, so every map is off: checkout takes the address only, with no delivery pin.</span>
+            </div>
+
+            <form class="panel" th:action="@{/admin/google-maps/rules}" method="post">
+                <h2 class="mt-0">Delivery pin &amp; distance rules</h2>
+                <div class="field">
+                    <label><input type="checkbox" name="showMaps" value="true" th:checked="${rules.showMaps}">
+                        <strong>Show Google Maps on the site</strong></label>
+                    <div class="hint">Off hides every map (checkout pin, order tracking, delivery dashboard, footer) and
+                        skips the pin checks; checkout takes the address only. Your keys are kept.</div>
+                </div>
+                <div class="field">
+                    <label><input type="checkbox" name="pinRequired" value="true" th:checked="${rules.pinRequired}">
+                        Customer must drop a map pin to place an order</label>
+                    <div class="hint">Turn off if customers get stuck at checkout; orders then go through without a pin
+                        (price = default delivery fee).</div>
+                </div>
+                <div class="field">
+                    <label><input type="checkbox" name="verifyPincode" value="true" th:checked="${rules.verifyPincode}">
+                        Reject a PIN code that does not match the pin</label>
+                </div>
+                <div class="field">
+                    <label><input type="checkbox" name="verifyLandmark" value="true" th:checked="${rules.verifyLandmark}">
+                        Reject a landmark that is far from the pin</label>
+                </div>
+                <div class="row-2">
+                    <div class="field">
+                        <label for="pincodeToleranceKm">PIN code tolerance (km)</label>
+                        <input id="pincodeToleranceKm" name="pincodeToleranceKm" type="number" step="0.1" min="0" required
+                               th:value="${rules.pincodeToleranceKm}">
+                    </div>
+                    <div class="field">
+                        <label for="landmarkToleranceKm">Landmark tolerance (km)</label>
+                        <input id="landmarkToleranceKm" name="landmarkToleranceKm" type="number" step="0.1" min="0" required
+                               th:value="${rules.landmarkToleranceKm}">
+                    </div>
+                </div>
+                <div class="field">
+                    <label><input type="checkbox" name="drivingDistance" value="true" th:checked="${rules.drivingDistance}">
+                        Use Google driving distance (store &rarr; pin)</label>
+                    <div class="hint">Off, or if Google cannot answer: straight-line distance &times; the road factor below.</div>
+                </div>
+                <div class="field">
+                    <label for="roadFactor">Road factor (1.0 - 3.0)</label>
+                    <input id="roadFactor" name="roadFactor" type="number" step="0.05" min="1" max="3" required
+                           th:value="${rules.roadFactor}">
+                </div>
+                <div class="form-actions"><button class="btn" type="submit">Save rules</button></div>
+            </form>
+
+            <div class="split">
+                <form class="panel" th:action="@{/admin/google-maps}" method="post" autocomplete="off">
+                    <div class="field">
+                        <label for="browserKey">Browser key (Maps JavaScript API)</label>
+                        <input id="browserKey" name="browserKey" maxlength="200" th:value="${maps.browserKey}"
+                               placeholder="AIza…">
+                        <div class="hint">Draws the maps. It is visible in the page, so restrict it in Google Cloud to
+                            <strong>your website's domain</strong> (HTTP referrers). Leave blank to switch maps off.</div>
+                    </div>
+
+                    <div class="field">
+                        <label for="serverKey">Server key <span class="muted">(optional but recommended)</span></label>
+                        <input id="serverKey" name="serverKey" type="password" maxlength="150" autocomplete="new-password"
+                               th:placeholder="${maps.serverKeySet} ? 'Saved - leave blank to keep it' : 'AIza…'">
+                        <div class="hint">Used by this server for <strong>Distance Matrix API</strong> (delivery distance
+                            and price) and <strong>Geocoding API</strong> (checks the PIN code and landmark against the
+                            dropped pin). Restrict it by <strong>server IP address</strong>. A website-restricted key is
+                            refused for these calls; with no server key the browser key is tried. Stored encrypted.</div>
+                        <label th:if="${maps.serverKeySet}" class="small"><input type="checkbox" name="clearServerKey"
+                               value="true"> Remove the saved server key</label>
+                    </div>
+
+                    <div class="form-actions"><button class="btn" type="submit">Save</button></div>
+                </form>
+
+                <div>
+                    <div class="panel">
+                        <h3 class="mt-0">Check it works</h3>
+                        <form th:action="@{/admin/google-maps/test}" method="post">
+                            <button class="btn ghost block" type="submit">Test server key</button>
+                        </form>
+                        <p class="small muted mb-0">Calls the Geocoding API with the saved key. Save first.</p>
+                    </div>
+                    <div class="panel">
+                        <h3 class="mt-0">Enable in Google Cloud</h3>
+                        <ul class="small">
+                            <li>Browser key: <em>Maps JavaScript API</em></li>
+                            <li>Server key: <em>Distance Matrix API</em> and <em>Geocoding API</em></li>
+                            <li>Billing must be on for the project.</li>
+                        </ul>
+                        <p class="small muted mb-0">If the server checks cannot reach Google, orders still go through:
+                            distance falls back to a straight-line estimate and the PIN/landmark checks are skipped.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+</body>
+</html>

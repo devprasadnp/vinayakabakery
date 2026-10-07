@@ -23,6 +23,11 @@ public class RoleAwareLoginSuccessHandler extends SavedRequestAwareAuthenticatio
                                         Authentication authentication) {
         boolean partner = authentication.getAuthorities().stream()
                 .anyMatch(a -> "ROLE_DELIVERY_PARTNER".equals(a.getAuthority()));
+        boolean manager = authentication.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_STORE_MANAGER".equals(a.getAuthority()));
+        if (manager) {
+            return "/admin";
+        }
         return partner ? DELIVERY_HOME : super.determineTargetUrl(request, response, authentication);
     }
 }

@@ -2,13 +2,14 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/panel :: head('Mail')}"></head>
 <body>
+<style th:replace="~{admin/mail-inbox :: mailStyle}"></style>
 <div class="shell">
     <aside th:replace="~{fragments/panel :: sidebar('mail')}"></aside>
 
     <main class="work">
         <div class="topbar">
             <div>
-                <h1 th:text="${message != null} ? (${message.subject} ?: '(no subject)') : 'Message'">Subject</h1>
+                <h1>Message</h1>
                 <div class="crumb" th:text="${folder == 'sent'} ? 'Sent' : 'Inbox'">Inbox</div>
             </div>
             <a class="btn ghost" th:href="@{/admin/mail(folder=${folder})}">&larr; Back to mail</a>
@@ -16,19 +17,30 @@
 
         <div class="work-body">
             <div th:replace="~{fragments/panel :: flash}"></div>
-
             <div class="notice bad" th:if="${mailError}">
                 <span class="ico">&#9888;</span><span th:text="${mailError}"></span>
             </div>
 
-            <div class="card" th:if="${message != null}">
-                <div class="body">
-                    <p class="muted small mb-0" th:text="|From: ${message.from}|"></p>
-                    <p class="muted small mb-0" th:text="|To: ${message.to}|"></p>
-                    <p class="muted small" th:if="${message.sentDate != null}"
-                       th:text="|${#temporals.format(message.sentDate, 'dd MMM yyyy, HH:mm')}|"></p>
-                    <hr>
-                    <div style="white-space:pre-wrap" th:text="${message.bodyText}"></div>
+            <div th:if="${message != null}">
+                <div class="mail-tools">
+                    <a class="btn" th:href="@{/admin/mail/compose(mode='reply', uid=${message.uid}, folder=${folder})}">&#8617; Reply</a>
+                    <a class="btn" th:href="@{/admin/mail/compose(mode='replyall', uid=${message.uid}, folder=${folder})}">&#8617;&#8617; Reply all</a>
+                    <a class="btn ghost" th:href="@{/admin/mail/compose(mode='forward', uid=${message.uid}, folder=${folder})}">Forward &#8618;</a>
+                </div>
+
+                <div class="mail-card">
+                    <div class="hdr">
+                        <h2 th:text="${message.subject} ?: '(no subject)'">Subject</h2>
+                        <div class="meta-row"><span class="k">From</span><span th:text="${message.from}"></span></div>
+                        <div class="meta-row"><span class="k">To</span><span th:text="${message.to}"></span></div>
+                        <div class="meta-row" th:if="${!#strings.isEmpty(message.cc)}"><span class="k">Cc</span><span th:text="${message.cc}"></span></div>
+                        <div class="meta-row" th:if="${message.sentDate != null}"><span class="k">Date</span>
+                            <span th:text="${#temporals.format(message.sentDate, 'EEE, dd MMM yyyy, HH:mm')}"></span></div>
+                    </div>
+                    <!-- Sender HTML is untrusted: a fully sandboxed frame (no scripts, no same-origin) shows it safely. -->
+                    <iframe th:if="${message.bodyHtml != null}" sandbox="allow-popups" referrerpolicy="no-referrer"
+                            th:srcdoc="${message.bodyHtml}"></iframe>
+                    <div class="bodytext" th:if="${message.bodyHtml == null}" th:text="${message.bodyText}"></div>
                 </div>
             </div>
         </div>

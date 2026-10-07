@@ -7,7 +7,9 @@ import com.harish.pickles.service.OrderService;
 import com.harish.pickles.web.CurrentUser;
 import java.util.List;
 import java.util.Set;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -40,6 +42,19 @@ public class DeliveryViewController {
         model.addAttribute("finished", mine.stream().filter(o -> !IN_PROGRESS.contains(o.getStatus()))
                 .limit(30).toList());
         return "delivery/dashboard";
+    }
+
+    /** Position ping from the courier's browser while an order is out; feeds the customer's tracking map. */
+    @PostMapping("/orders/{orderNumber}/location")
+    @ResponseBody
+    public ResponseEntity<Void> reportLocation(@PathVariable String orderNumber, @RequestParam double lat,
+                                               @RequestParam double lng) {
+        try {
+            orderService.updatePartnerLocation(orderNumber, CurrentUser.require(), lat, lng);
+            return ResponseEntity.noContent().build();
+        } catch (BusinessException ex) {
+            return ResponseEntity.status(409).build();
+        }
     }
 
     @PostMapping("/orders/{orderNumber}/status")
